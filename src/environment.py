@@ -18,6 +18,7 @@ class Environment:
 		self.api.setBool('display_screen', display_screen)
 		self.rom_name = rom_name
 		self.agent = None
+		print '../rom/' + self.rom_name
 		self.api.loadROM('../rom/' + self.rom_name)
 		self.minimal_actions = self.api.getMinimalActionSet()
 		self.merge_frame = np.zeros((2, Environment.ORIGINAL_HEIGHT, Environment.ORIGINAL_WIDTH), dtype = np.uint8)

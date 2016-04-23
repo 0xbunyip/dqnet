@@ -3,7 +3,8 @@ import time
 
 class Experience:
 	"""docstring for Experience"""
-	def __init__(self, replay_mem_size, frame_height, frame_width, frames_per_state):
+	def __init__(self, replay_mem_size, frame_height, frame_width, frames_per_state, rng):
+		self.rng = rng
 		self.replay_mem_size = replay_mem_size
 		self.top = 0
 		self.len = 0
@@ -14,30 +15,23 @@ class Experience:
 		self.action = np.zeros((replay_mem_size, 1), dtype = np.uint8)
 		self.reward = np.zeros((replay_mem_size, 1), dtype = np.int32)
 		self.terminal = np.zeros((replay_mem_size, 1), dtype = np.bool_)
+		self.return_state = np.zeros((frames_per_state, frame_height, frame_width), dtype = np.uint8)
 
-	def update_current_observation(self, obs, is_terminal):
+	def add_experience(self, obs, is_terminal, action, reward):
 		self.obs[self.top, :, :] = obs
 		self.terminal[self.top] = is_terminal
-
-	def add_action_reward(self, action, reward):
 		self.action[self.top] = action
 		self.reward[self.top] = reward
-
+		
 		self.top = (self.top + 1) % self.replay_mem_size
 		if self.len < self.replay_mem_size:
 			self.len += 1
 
-	def get_last_state(self):
-		assert self.len >= self.frames_per_state
-		return self.obs.take(np.arange(self.top - self.frames_per_state, self.top), axis = 0, mode = 'wrap')
-
-	def get_last_experience(self):
-		assert self.len >= self.frames_per_state
-		state = self.get_last_state()
-		action = self.action[self.top - 1]
-		reward = self.reward[self.top - 1]
-		terminal = self.terminal[self.top - 1]
-		return (state, action, reward, terminal)
+	def get_state(self, obs):
+		assert self.len + 1 >= self.frames_per_state
+		self.return_state[-1, :, :] = obs
+		self.return_state[:-1, :, :] = self.obs.take(np.arange(self.top - self.frames_per_state + 1, self.top), axis = 0, mode = 'wrap')
+		return self.return_state
 
 	def get_random_minibatch(self, mbsize):
 		assert self.len >= self.frames_per_state
@@ -50,7 +44,7 @@ class Experience:
 		#print "Top =", self.top
 		cnt = 0
 		while cnt < mbsize:
-			start_id = np.random.randint(1, self.len - self.frames_per_state + 1) + self.top * (self.len >= self.replay_mem_size)
+			start_id = self.rng.randint(1, self.len - self.frames_per_state + 1) + self.top * (self.len >= self.replay_mem_size)
 			end_id = start_id + self.frames_per_state - 1
 			#print start_id, end_id, self.terminal.take(np.arange(start_id - 1, end_id - 1), mode = 'wrap')
 			if not np.any(self.terminal.take(np.arange(start_id - 1, end_id - 1), mode = 'wrap')):				

@@ -46,10 +46,8 @@ class Network:
 	def _build_simple_network(self, input_var, num_action, mbsize, channel, height, width):
 		network = lasagne.layers.InputLayer(
 			(mbsize, channel, height, width), input_var)
-		network = lasagne.layers.Conv2DLayer(
-			network, num_filters = 3, filter_size = (2, 2), stride = (1, 1))
 		network = lasagne.layers.DenseLayer(
-			network, num_units = 50)
+			network, num_units = 256)
 		network = lasagne.layers.DenseLayer(
 			network, num_units = num_action, nonlinearity = None)
 		return network
@@ -97,6 +95,11 @@ class Network:
 		net_params = lasagne.layers.get_all_params(self.net)
 		updates = lasagne.updates.rmsprop(loss, net_params, learning_rate = Network.LEARNING_RATE)
 		self.train_fn = theano.function([], loss, updates = updates, givens = train_givens)
+
+		####
+		self.loss_fn = theano.function([], loss, givens = train_givens)
+		self.valmat_fn = theano.function([], current_values_matrix, givens = {state : self.shared_state})
+		####
 		
 		evaluate_givens = {state : self.shared_state}
 		self.dummy_state = np.zeros(
@@ -112,14 +115,34 @@ class Network:
 		self.shared_reward.set_value(reward)
 		self.shared_terminal.set_value(terminal)
 		self.shared_next_state.set_value(next_state / np.float32(Network.SCALE_FACTOR))
+
+		# valmat_before = self.valmat_fn()
 		loss = self.train_fn()
+		# valmat_after = self.valmat_fn()
+
+		# print "Current state =\n", state
+		# print "Action =", action
+		# print "Reward =", reward
+		# print "Before =\n", valmat_before
+		# print "After =\n", valmat_after
+		# raw_input()
+
+		# loss_after = self.loss_fn()
+		# print "Loss before = %.3f, loss after = %.3f" % (loss, loss_after)
+		# raw_input()
 		return loss
 
-	def get_action(self, state):
+	def get_action(self, state, print_Q = False):
 		assert self.evaluate_fn != None
 		self.dummy_state[0, ...] = state / np.float32(Network.SCALE_FACTOR)
 		self.shared_state.set_value(self.dummy_state)
 		action_values_matrix = self.evaluate_fn()
+
+		if print_Q:
+			print "State =\n", state
+			print "Action values matrix =\n", action_values_matrix[0, :]
+			print "Action chosen =", np.argmax(action_values_matrix[0, :])
+			raw_input()
 		return np.argmax(action_values_matrix[0, :])
 
 	def get_params(self):
