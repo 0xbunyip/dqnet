@@ -6,7 +6,7 @@ import theano.tensor as T
 class Network:
 	"""docstring for Network"""
 
-	LEARNING_RATE = 0.00025
+	LEARNING_RATE = 0.0025
 	SCALE_FACTOR = 15.0
 
 	def __init__(self, num_action, mbsize, channel, height, width, discount):
@@ -20,6 +20,7 @@ class Network:
 		#self.net = self._build_dqn(self.input_var, num_action, mbsize, channel, height, width)
 		self.net = self._build_simple_network(self.input_var, num_action, mbsize, channel, height, width)
 		self.train_fn = None
+		self.validate_fn = None
 		self.evaluate_fn = None
 		self.dummy_state = None
 		self.shared_state = None
@@ -27,21 +28,6 @@ class Network:
 		self.shared_reward = None
 		self.shared_terminal = None
 		self.shared_next_state = None
-
-	def _build_dqn(self, input_var, num_action, mbsize, channel, height, width):
-		network = lasagne.layers.InputLayer(
-			(mbsize, channel, height, width), input_var)
-		network = lasagne.layers.Conv2DLayer(
-			network, num_filters = 32, filter_size = (8, 8), stride = (4, 4))
-		network = lasagne.layers.Conv2DLayer(
-			network, num_filters = 64, filter_size = (4, 4), stride = (2, 2))
-		network = lasagne.layers.Conv2DLayer(
-			network, num_filters = 64, filter_size = (3, 3), stride = (1, 1))
-		network = lasagne.layers.DenseLayer(
-			network, num_units = 512)
-		network = lasagne.layers.DenseLayer(
-			network, num_units = num_action, nonlinearity = None)
-		return network
 
 	def _build_simple_network(self, input_var, num_action, mbsize, channel, height, width):
 		network = lasagne.layers.InputLayer(
@@ -95,60 +81,45 @@ class Network:
 		net_params = lasagne.layers.get_all_params(self.net)
 		updates = lasagne.updates.rmsprop(loss, net_params, learning_rate = Network.LEARNING_RATE)
 		self.train_fn = theano.function([], loss, updates = updates, givens = train_givens)
-
-		####
-		self.loss_fn = theano.function([], loss, givens = train_givens)
-		self.valmat_fn = theano.function([], current_values_matrix, givens = {state : self.shared_state})
-		####
 		
 		evaluate_givens = {state : self.shared_state}
 		self.dummy_state = np.zeros(
 			(self.mbsize, self.channel, self.height, self.width), 
 			dtype = np.float32)
-		self.evaluate_fn = theano.function([], current_values_matrix, givens = evaluate_givens)
+		action_to_take = T.argmax(current_values_matrix, axis = 1)
+		self.evaluate_fn = theano.function([], action_to_take, givens = evaluate_givens)
+
+		validate_givens = {state : self.shared_state}
+		max_action_values = T.max(current_values_matrix, axis = 1)
+		self.validate_fn = theano.function([], max_action_values, givens = validate_givens)
 		print "Finished building train and evaluate function"
 
 	def train_one_minibatch(self, tnet, state, action, reward, terminal, next_state):
-		assert self.train_fn != None
+		assert self.train_fn is not None
 		self.shared_state.set_value(state / np.float32(Network.SCALE_FACTOR))
 		self.shared_action.set_value(action)
 		self.shared_reward.set_value(reward)
 		self.shared_terminal.set_value(terminal)
 		self.shared_next_state.set_value(next_state / np.float32(Network.SCALE_FACTOR))
-
-		# valmat_before = self.valmat_fn()
 		loss = self.train_fn()
-		# valmat_after = self.valmat_fn()
-
-		# print "Current state =\n", state
-		# print "Action =", action
-		# print "Reward =", reward
-		# print "Before =\n", valmat_before
-		# print "After =\n", valmat_after
-		# raw_input()
-
-		# loss_after = self.loss_fn()
-		# print "Loss before = %.3f, loss after = %.3f" % (loss, loss_after)
-		# raw_input()
 		return loss
 
-	def get_action(self, state, print_Q = False):
-		assert self.evaluate_fn != None
+	def get_action(self, state):
+		assert self.evaluate_fn is not None
 		self.dummy_state[0, ...] = state / np.float32(Network.SCALE_FACTOR)
 		self.shared_state.set_value(self.dummy_state)
-		action_values_matrix = self.evaluate_fn()
+		return self.evaluate_fn()[0]
 
-		if print_Q:
-			print "State =\n", state
-			print "Action values matrix =\n", action_values_matrix[0, :]
-			print "Action chosen =", np.argmax(action_values_matrix[0, :])
-			raw_input()
-		return np.argmax(action_values_matrix[0, :])
+	def get_max_action_values(self, states):
+		assert self.validate_fn is not None
+		self.shared_state.set_value(states / np.float32(Network.SCALE_FACTOR))
+		return self.validate_fn()
 
 	def get_params(self):
 		return lasagne.layers.get_all_param_values(self.net)
 
 	def set_params(self, params):
 		lasagne.layers.set_all_param_values(self.net, params)
+		
 		
 		

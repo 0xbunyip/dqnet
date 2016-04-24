@@ -3,10 +3,11 @@ import numpy as np
 class BanditGame():
 	"""docstring for GridGame"""
 
-	MAX_MEAN = 3
-	MAX_VAR = 2
+	MAX_MEAN = 7
+	MAX_VAR = 4
 
-	def __init__(self, height, width, rng):
+	def __init__(self, height, width, one_state, rng):
+		self.one_state = one_state
 		self.rng = rng
 		self.action_set = range(height * width)
 		self.mean = np.random.randint(-BanditGame.MAX_MEAN, BanditGame.MAX_MEAN + 1, size = (height, width))
@@ -31,8 +32,11 @@ class BanditGame():
 		return self.grid[x, y] - self.translate
 
 	def getScreenGrayscale(self, obs):
-		np.copyto(dst = obs, src = self.grid)
-		# np.copyto(dst = obs, src = np.zeros((2, 2), dtype = np.uint8))
+		if self.one_state:
+			np.copyto(dst = obs, src = np.zeros((5, 5), dtype = np.uint8))
+		else:
+			np.copyto(dst = obs, src = self.grid)
+		
 
 	def reset_game(self):
 		self.acted = False

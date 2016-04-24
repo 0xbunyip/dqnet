@@ -6,8 +6,8 @@ import theano.tensor as T
 class Network:
 	"""docstring for Network"""
 
-	LEARNING_RATE = 0.00025
-	SCALE_FACTOR = 15.0
+	LEARNING_RATE = 0.0025
+	SCALE_FACTOR = 255.0
 
 	def __init__(self, num_action, mbsize, channel, height, width, discount):
 		self.num_action = num_action
@@ -21,6 +21,7 @@ class Network:
 		self.net = self._build_simple_network(self.input_var, num_action, mbsize, channel, height, width)
 		self.train_fn = None
 		self.evaluate_fn = None
+		self.validate_fn = None
 		self.dummy_state = None
 		self.shared_state = None
 		self.shared_action = None
@@ -102,11 +103,16 @@ class Network:
 		self.dummy_state = np.zeros(
 			(self.mbsize, self.channel, self.height, self.width), 
 			dtype = np.float32)
-		self.evaluate_fn = theano.function([], current_values_matrix, givens = evaluate_givens)
+		action_to_take = T.argmax(current_values_matrix, axis = 1)
+		self.evaluate_fn = theano.function([], action_to_take, givens = evaluate_givens)
+
+		validate_givens = {state : self.shared_state}
+		max_action_values = T.max(current_values_matrix, axis = 1)
+		self.validate_fn = theano.function([], max_action_values, givens = validate_givens)
 		print "Finished building train and evaluate function"
 
 	def train_one_minibatch(self, tnet, state, action, reward, terminal, next_state):
-		assert self.train_fn != None
+		assert self.train_fn is not None
 		self.shared_state.set_value(state / np.float32(Network.SCALE_FACTOR))
 		self.shared_action.set_value(action)
 		self.shared_reward.set_value(reward)
@@ -116,11 +122,15 @@ class Network:
 		return loss
 
 	def get_action(self, state):
-		assert self.evaluate_fn != None
+		assert self.evaluate_fn is not None
 		self.dummy_state[0, ...] = state / np.float32(Network.SCALE_FACTOR)
 		self.shared_state.set_value(self.dummy_state)
-		action_values_matrix = self.evaluate_fn()
-		return np.argmax(action_values_matrix[0, :])
+		return self.evaluate_fn()[0]
+
+	def get_max_action_values(self, states):
+		assert self.validate_fn is not None
+		self.shared_state.set_value(states / np.float32(Network.SCALE_FACTOR))
+		return self.validate_fn()
 
 	def get_params(self):
 		return lasagne.layers.get_all_param_values(self.net)

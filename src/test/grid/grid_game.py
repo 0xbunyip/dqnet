@@ -40,7 +40,7 @@ class GridGame():
 		np.copyto(dst = obs, src = self.grid)
 
 	def reset_game(self):
-		self._reset_game_grid()
+		self._reset_game_full()
 
 	def _normalize_grid(self):
 		self.grid[self.grid == 0] = 1

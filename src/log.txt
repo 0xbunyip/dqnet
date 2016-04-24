@@ -1,0 +1,498 @@
+../rom/breakout.bin
+[0 1 3 4]
+Finished building train and evaluate function
+
+============================================
+Epoch #0
+Starting episode, not enough frame (1), action = 2
+Starting episode, not enough frame (2), action = 1
+Starting episode, not enough frame (3), action = 2
+Start training, not enough experience (4), action = 2
+Start training, not enough experience (5), action = 2
+Start training, not enough experience (6), action = 1
+Start training, not enough experience (7), action = 2
+Start training, not enough experience (8), action = 1
+Start training, not enough experience (9), action = 1
+Start training, not enough experience (10), action = 1
+Start training, not enough experience (11), action = 3
+Start training, not enough experience (12), action = 0
+Start training, not enough experience (13), action = 0
+Start training, not enough experience (14), action = 1
+Start training, not enough experience (15), action = 2
+Start training, not enough experience (16), action = 0
+Start training, not enough experience (17), action = 0
+Start training, not enough experience (18), action = 1
+Start training, not enough experience (19), action = 3
+Start training, not enough experience (20), action = 0
+Start training, not enough experience (21), action = 2
+Start training, not enough experience (22), action = 3
+Start training, not enough experience (23), action = 1
+Start training, not enough experience (24), action = 3
+Start training, not enough experience (25), action = 3
+Start training, not enough experience (26), action = 0
+Finished episode #0, steps_left = 174
+Starting episode, not enough frame (1), action = 2
+Starting episode, not enough frame (2), action = 1
+Starting episode, not enough frame (3), action = 1
+Start training, not enough experience (30), action = 2
+Start training, not enough experience (31), action = 3
+Start training, not enough experience (32), action = 1
+Start training, not enough experience (33), action = 0
+Start training, not enough experience (34), action = 2
+Start training, not enough experience (35), action = 0
+Start training, not enough experience (36), action = 2
+Start training, not enough experience (37), action = 2
+Start training, not enough experience (38), action = 1
+Start training, not enough experience (39), action = 0
+Start training, not enough experience (40), action = 3
+Start training, not enough experience (41), action = 1
+Start training, not enough experience (42), action = 2
+Start training, not enough experience (43), action = 2
+Start training, not enough experience (44), action = 3
+Start training, not enough experience (45), action = 0
+Start training, not enough experience (46), action = 2
+Start training, not enough experience (47), action = 0
+Start training, not enough experience (48), action = 3
+Start training, not enough experience (49), action = 3
+Start training, not enough experience (50), action = 3
+Collect validation states
+Greedy action = 2
+Uniform random action (obs = 52, eps = 0.532), action = 1
+Uniform random action (obs = 53, eps = 0.523), action = 0
+Uniform random action (obs = 54, eps = 0.514), action = 2
+Uniform random action (obs = 55, eps = 0.505), action = 2
+Uniform random action (obs = 56, eps = 0.496), action = 2
+Uniform random action (obs = 57, eps = 0.487), action = 0
+Greedy action = 1
+Greedy action = 1
+Uniform random action (obs = 60, eps = 0.460), action = 3
+Greedy action = 1
+Uniform random action (obs = 62, eps = 0.442), action = 1
+Greedy action = 1
+Uniform random action (obs = 64, eps = 0.424), action = 3
+Uniform random action (obs = 65, eps = 0.415), action = 0
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Uniform random action (obs = 72, eps = 0.352), action = 1
+Greedy action = 1
+Greedy action = 1
+Greedy action = 1
+Uniform random action (obs = 76, eps = 0.316), action = 0
+Greedy action = 1
+Greedy action = 1
+Greedy action = 2
+Greedy action = 2
+Greedy action = 1
+Greedy action = 1
+Greedy action = 1
+Uniform random action (obs = 84, eps = 0.244), action = 0
+Uniform random action (obs = 85, eps = 0.235), action = 1
+Uniform random action (obs = 86, eps = 0.226), action = 3
+Greedy action = 2
+Uniform random action (obs = 88, eps = 0.208), action = 0
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Uniform random action (obs = 92, eps = 0.172), action = 0
+Greedy action = 1
+Greedy action = 1
+Greedy action = 1
+Greedy action = 1
+Greedy action = 2
+Greedy action = 2
+Uniform random action (obs = 99, eps = 0.109), action = 2
+Greedy action = 2
+	Clone network at obs_count = 100
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 1
+Greedy action = 1
+Uniform random action (obs = 111, eps = 0.100), action = 0
+Greedy action = 1
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Uniform random action (obs = 116, eps = 0.100), action = 3
+Uniform random action (obs = 117, eps = 0.100), action = 3
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Finished episode #1, steps_left = 73
+Starting episode, not enough frame (1), action = 2
+Starting episode, not enough frame (2), action = 0
+Starting episode, not enough frame (3), action = 0
+Greedy action = 3
+Greedy action = 3
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 1
+Greedy action = 1
+Greedy action = 1
+Uniform random action (obs = 152, eps = 0.100), action = 3
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Uniform random action (obs = 157, eps = 0.100), action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Uniform random action (obs = 161, eps = 0.100), action = 0
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Uniform random action (obs = 169, eps = 0.100), action = 1
+Uniform random action (obs = 170, eps = 0.100), action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 3
+Finished episode #2, steps_left = 27
+Starting episode, not enough frame (1), action = 2
+Starting episode, not enough frame (2), action = 0
+Starting episode, not enough frame (3), action = 3
+Uniform random action (obs = 177, eps = 0.100), action = 3
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 3
+Greedy action = 3
+Uniform random action (obs = 183, eps = 0.100), action = 1
+Uniform random action (obs = 184, eps = 0.100), action = 0
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Uniform random action (obs = 188, eps = 0.100), action = 3
+Greedy action = 3
+Uniform random action (obs = 190, eps = 0.100), action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 1
+Greedy action = 1
+Greedy action = 1
+Greedy action = 1
+Greedy action = 0
+Greedy action = 0
+Greedy action = 0
+Greedy action = 0
+	Clone network at obs_count = 200
+Finished episode #3, steps_left = 0
+Finsihed epoch #0, average validate action values = 0.618
+
+============================================
+Epoch #1
+Starting episode, not enough frame (1), action = 0
+Starting episode, not enough frame (2), action = 2
+Starting episode, not enough frame (3), action = 0
+Greedy action = 3
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 1
+Greedy action = 1
+Greedy action = 1
+Greedy action = 1
+Greedy action = 1
+Greedy action = 1
+Greedy action = 1
+Greedy action = 1
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Uniform random action (obs = 238, eps = 0.100), action = 3
+Uniform random action (obs = 239, eps = 0.100), action = 0
+Greedy action = 3
+Greedy action = 0
+Uniform random action (obs = 242, eps = 0.100), action = 0
+Greedy action = 0
+Greedy action = 0
+Greedy action = 1
+Greedy action = 1
+Greedy action = 1
+Greedy action = 1
+Greedy action = 2
+Finished episode #0, steps_left = 151
+Starting episode, not enough frame (1), action = 1
+Starting episode, not enough frame (2), action = 0
+Starting episode, not enough frame (3), action = 0
+Uniform random action (obs = 253, eps = 0.100), action = 1
+Greedy action = 1
+Greedy action = 1
+Greedy action = 1
+Greedy action = 3
+Uniform random action (obs = 258, eps = 0.100), action = 2
+Greedy action = 3
+Greedy action = 3
+Greedy action = 1
+Greedy action = 1
+Greedy action = 1
+Greedy action = 1
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Uniform random action (obs = 273, eps = 0.100), action = 3
+Greedy action = 3
+Finished episode #1, steps_left = 126
+Starting episode, not enough frame (1), action = 1
+Starting episode, not enough frame (2), action = 1
+Starting episode, not enough frame (3), action = 0
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 1
+Greedy action = 1
+Greedy action = 1
+Greedy action = 1
+Greedy action = 3
+Uniform random action (obs = 298, eps = 0.100), action = 1
+Greedy action = 3
+Greedy action = 3
+	Clone network at obs_count = 300
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Uniform random action (obs = 341, eps = 0.100), action = 0
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Finished episode #2, steps_left = 51
+Starting episode, not enough frame (1), action = 2
+Starting episode, not enough frame (2), action = 2
+Starting episode, not enough frame (3), action = 1
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 1
+Greedy action = 1
+Greedy action = 1
+Greedy action = 1
+Greedy action = 1
+Uniform random action (obs = 362, eps = 0.100), action = 2
+Uniform random action (obs = 363, eps = 0.100), action = 2
+Greedy action = 1
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 1
+Greedy action = 1
+Greedy action = 1
+Uniform random action (obs = 372, eps = 0.100), action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Uniform random action (obs = 376, eps = 0.100), action = 2
+Finished episode #3, steps_left = 24
+Starting episode, not enough frame (1), action = 2
+Starting episode, not enough frame (2), action = 3
+Starting episode, not enough frame (3), action = 2
+Uniform random action (obs = 380, eps = 0.100), action = 2
+Greedy action = 3
+Uniform random action (obs = 382, eps = 0.100), action = 0
+Greedy action = 3
+Greedy action = 3
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Uniform random action (obs = 388, eps = 0.100), action = 3
+Uniform random action (obs = 389, eps = 0.100), action = 2
+Greedy action = 3
+Greedy action = 3
+Greedy action = 3
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Uniform random action (obs = 397, eps = 0.100), action = 2
+Greedy action = 3
+Greedy action = 3
+Uniform random action (obs = 400, eps = 0.100), action = 3
+	Clone network at obs_count = 400
+Finished episode #4, steps_left = 0
+Finsihed epoch #1, average validate action values = 0.702
+
+***Start evaluating
+Starting episode, not enough frame (1), action = 0
+Starting episode, not enough frame (2), action = 2
+Starting episode, not enough frame (3), action = 1
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Uniform random action (obs = 401, eps = 0.050), action = 0
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Uniform random action (obs = 401, eps = 0.050), action = 1
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Greedy action = 2
+Number of frame seen: 400
+Test average reward = 2.000

@@ -1,17 +1,23 @@
 TODO:
-- Test Q-learning and Network with small grid game
-- Add evaluation module
-- Split train and evaluation experience
-- Add epsilon to get_action (evaluation action has different epsilon)
 - Save network's weight and report loss/reward each epoch
+- Add timing module
+- Unify Random number generators
+- Add random actions at the start of each episode
 - Clip error term of Q-learning update to [-1, 1]
 - Clip reward of each step to [-1, 1]
-- Add random actions at the start of each episode
-- (AND/OR) check number of observations have been seen at the start of each episode
-- Unify Random number generators
 - Change RMSProp parameters
 - Test speed on GPU
+- Clean up code, shorten params' names
 - Add function descriptions and comments
 - Move half experiences to GPU
 
 DONE:
+- Add evaluation module
+- Split train and evaluation experience
+- Split agent off environment
+- Add epsilon to get_action (evaluation action has different epsilon)
+- Place hyper-parameters into a single place
+- Check number of observations have been seen at the start of each episode
+- Save some frames at the start to validate average Q values on those frames
+- Change evaluate_fn to return action instead of values matrix
+- Test Q-learning and Network with small grid game

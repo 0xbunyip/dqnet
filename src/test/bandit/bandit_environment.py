@@ -6,118 +6,92 @@ class Environment:
 	"""docstring for Environment"""
 
 	STEPS_PER_EPOCH = 10000
-	FRAMES_SKIP = 1
+	TRAIN_FRAMES_SKIP = 4
+	EVAL_FRAMES_SKIP = 6
+
 	ORIGINAL_HEIGHT = 2
 	ORIGINAL_WIDTH = 2
 	FRAME_HEIGHT = 2
 	FRAME_WIDTH = 2
 
-	def __init__(self, rng, display_screen = False):
-		self.api = BanditGame(Environment.ORIGINAL_HEIGHT, Environment.ORIGINAL_WIDTH, rng)
+	def __init__(self, rng, one_state = False, display_screen = False):
+		self.api = BanditGame(Environment.ORIGINAL_HEIGHT, Environment.ORIGINAL_WIDTH, one_state, rng)
 		self.agent = None
 		self.minimal_actions = self.api.getMinimalActionSet()
 		self.merge_frame = np.zeros((1, Environment.ORIGINAL_HEIGHT, Environment.ORIGINAL_WIDTH), dtype = np.uint8)
 		self.merge_id = 0
 		print self.minimal_actions
 
-	def hook_agent(self, agent):
-		self.agent = agent
-
 	def get_action_count(self):
 		return len(self.minimal_actions)
 
-	def train_agent(self, epoch_count):
-		num_test = 100
-		before_reward = 0
-		# before_reward, _ = self.test(num_test)
-
+	def train(self, agent, epoch_count):
 		obs = np.zeros((Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH), dtype = np.uint8)
 		for epoch in xrange(epoch_count):
 			steps_left = Environment.STEPS_PER_EPOCH
 
-			print "============================================"
+			print "\n============================================"
 			print "Epoch #%d" % epoch
 			episode = 0
 			while steps_left > 0:
-				steps_left -= self._run_episode(steps_left, obs)
+				num_step, _ = self._run_episode(agent, steps_left, obs, Environment.TRAIN_FRAMES_SKIP)
+				steps_left -= num_step
 				if steps_left == 0 or episode % 1000 == 0:
 					print "Finished episode #%d, steps_left = %d" % (episode, steps_left)
 				episode += 1
-			# epoch_reward, _ = self.test(num_test)
-			# print "Finsihed epoch #%d, reward per episode = %.3f" % (epoch, epoch_reward)
+			avg_validate_values = agent.get_validate_values()
+			print "Finsihed epoch #%d, average validate action values = %.3f" % (epoch, avg_validate_values)
 
-		print "Number of frame seen:", self.agent.obs_count
+		avg_reward = self.evaluate(agent, num_eval_episode = 10, obs = obs)
+		print "Number of frame seen:", agent.num_train_obs
+		print "Test average reward = %.3f" % (avg_reward)
 
-		after_reward, action_list = self.test(num_test)
-		print "BEFORE TRAINING: reward per episode =", before_reward
-		print "AFTER TRAINING: reward per episode =", after_reward		
-		print "Action list =", action_list
+	def evaluate(self, agent, num_eval_episode = 30, eps = 0.05, obs = None):
+		print "\n***Start evaluating"
+		if obs is None:
+			obs = np.zeros((Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH), dtype = np.uint8)
+		sum_reward = 0.0
+		for episode in xrange(num_eval_episode):
+			_, reward = self._run_episode(agent, 100, obs, Environment.EVAL_FRAMES_SKIP, eps, evaluating = True, print_Q = True)
+			sum_reward += reward
+		return sum_reward / num_eval_episode
 
-	def _run_episode(self, steps_left, obs):
+	def _run_episode(self, agent, steps_left, obs, repeat_action, eps = 0.0, evaluating = False, print_Q = False):
 		self.api.reset_game()		
 		starting_lives = self.api.lives()
 		is_terminal = False
 		step_count = 0
+		sum_reward = 0
 
 		while step_count < steps_left and not is_terminal:
 			self._get_screen(obs)
-			action_id = self.agent.get_action(obs)
+			action_id = agent.get_action(obs, eps, evaluating)
+
+			if print_Q:
+				print "Observation = \n", obs
+				print "Action =", self.minimal_actions[action_id]
+				raw_input()
 			
-			reward = self._repeat_action(self.minimal_actions[action_id])
+			reward = self._repeat_action(self.minimal_actions[action_id], repeat_action)
 			is_terminal = self.api.game_over() or (self.api.lives() < starting_lives) or (step_count + 1 >= steps_left)
-			self.agent.add_experience(obs, is_terminal, action_id, reward)
+			agent.add_experience(obs, is_terminal, action_id, reward, evaluating)
 
-			# print "Step #%d, obs =" % step_count
-			# print obs
-			# print "Action = %d" % self.minimal_actions[action_id]
+			sum_reward += reward
 			step_count += 1
-		return step_count
+		return step_count, sum_reward
 
-	def _repeat_action(self, action):
+	def _repeat_action(self, action, repeat_action):
 		reward = 0
-		for _ in xrange(Environment.FRAMES_SKIP):
+		for _ in xrange(repeat_action):
 			reward += self.api.act(action)
 		return reward
 
 	def _get_screen(self, resized_frame):
 		self.merge_id = (self.merge_id + 1) % 1
 		self.api.getScreenGrayscale(self.merge_frame[self.merge_id, :])
-		self._resize_frame(self.merge_frame.max(axis = 0), resized_frame)
+		return self._resize_frame(self.merge_frame.max(axis = 0), resized_frame)
 				
 	def _resize_frame(self, src_frame, dst_frame):
 		return cv2.resize(src = src_frame, dst = dst_frame,
 						dsize = (Environment.FRAME_WIDTH, Environment.FRAME_HEIGHT), 
 						interpolation = cv2.INTER_LINEAR)
-
-	def test(self, num_episode, max_episode_length = 1000, print_each_step = False):	
-		total_reward = 0.0
-		obs = np.zeros((Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH), dtype = np.uint8)
-		is_terminal = False
-		action_list = np.zeros((len(self.minimal_actions), 1))
-
-		for episode in range(num_episode):
-			self.api.reset_game()
-			episode_reward = 0
-			step_cnt = 0
-			while not self.api.game_over() and step_cnt < max_episode_length:
-				self._get_screen(obs)
-				action_id = self.agent.get_action(obs, e_greedy = False, print_Q = True)
-				action_list[self.minimal_actions[action_id]] += 1
-				reward = self._repeat_action(self.minimal_actions[action_id])
-
-				if print_each_step:
-					print "Action = %d, Obs =" % self.minimal_actions[action_id]
-					print obs.astype(dtype = np.int32) - BanditGame.MAX_MEAN - BanditGame.MAX_VAR
-					print "Reward =", reward
-					print "\n"
-
-				is_terminal = self.api.game_over() or (step_cnt + 1 >= max_episode_length)
-				self.agent.add_experience(obs, is_terminal, action_id, reward, testing = True)
-				
-				episode_reward += reward
-				step_cnt += 1
-
-			#print("Episode %d ended with score: %d" % (episode, episode_reward))
-			total_reward += episode_reward
-		return total_reward / num_episode, action_list
-		# print "Average reward per episode of %d episodes = %.5f" % (num_episode, total_reward / num_episode)
