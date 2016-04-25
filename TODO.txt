@@ -1,4 +1,5 @@
 TODO:
+- Use 2 function with different minibatch sizes OR use None for minibatch sizes
 - Save network's weight and report loss/reward each epoch
 - Add timing module
 - Unify Random number generators
@@ -10,6 +11,11 @@ TODO:
 - Clean up code, shorten params' names
 - Add function descriptions and comments
 - Move half experiences to GPU
+- Test Double Q-learning
+
+DOING:
+- Join state and next_state of returned experience
+- Get multiple indices for each iteration in get_random_minibatch
 
 DONE:
 - Add evaluation module

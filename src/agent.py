@@ -40,23 +40,23 @@ class Agent:
 	def get_action(self, obs, eps = 0.0, evaluating = False):
 		random_action = self.rng.randint(self.num_action)
 		if self.obs_episode + 1 < Agent.AGENT_HISTORY_LENGTH:
-			print "Starting episode, not enough frame (%d), action = %d" % (self.obs_episode + 1, random_action)
+			# print "Starting episode, not enough frame (%d), action = %d" % (self.obs_episode + 1, random_action)
 			return random_action
 
 		exp = self.exp_eval
 		if not evaluating:
 			exp = self.exp_train
 			if self.num_train_obs < Agent.REPLAY_START_SIZE:
-				print "Start training, not enough experience (%d), action = %d" % (self.num_train_obs + 1, random_action)
+				# print "Start training, not enough experience (%d), action = %d" % (self.num_train_obs + 1, random_action)
 				return self.rng.randint(self.num_action)
 			eps = Agent.INITIAL_EXPLORATION + self.eps_decay_rate * min(Agent.FINAL_EXPLORATION_FRAME, self.num_train_obs + 1)
 
 		if self.rng.rand() < eps:
-			print "Uniform random action (obs = %d, eps = %.3f), action = %d" % (self.num_train_obs + 1, eps, random_action)
+			# print "Uniform random action (obs = %d, eps = %.3f), action = %d" % (self.num_train_obs + 1, eps, random_action)
 			return self.rng.randint(self.num_action)
 
 		action = self.network.get_action(exp.get_state(obs))
-		print "Greedy action = %d" % (action)
+		# print "Greedy action = %d" % (action)
 		return action
 
 	def add_experience(self, obs, is_terminal, action, reward, evaluating = False):
@@ -68,7 +68,7 @@ class Agent:
 
 		if self.num_train_obs == Agent.REPLAY_START_SIZE:
 			print "Collect validation states"
-			self.validate_states, _, _, _, _ = self.exp_train.get_random_minibatch(self.validate_size)
+			self.validate_states, _, _, _ = self.exp_train.get_random_minibatch(self.validate_size)
 
 		self.obs_episode += 1
 		if is_terminal:
@@ -86,17 +86,11 @@ class Agent:
 		return sum_action_values / self.validate_size
 
 	def _train_one_minibatch(self):
-		state, action, reward, terminal, next_state = self.exp_train.get_random_minibatch(self.mbsize)
-		# print "Train one minibatch ="
-		# print "Current state =\n", state
-		# print "Action =", action
-		# print "Reward =", reward
-		# print "Terminal =", terminal
-		# print "Next state =\n", next_state
+		states, action, reward, terminal = self.exp_train.get_random_minibatch(self.mbsize)
 		if self.num_train_obs % Agent.TARGET_NETWORK_UPDATE_FREQUENCY == 0:
 			print "\tClone network at obs_count =", self.num_train_obs
 			self._clone_network()
-		loss = self.network.train_one_minibatch(self.tnetwork, state, action, reward, terminal, next_state)
+		loss = self.network.train_one_minibatch(self.tnetwork, states, action, reward, terminal)
 
 	def _clone_network(self):
 		self.tnetwork.set_params(self.network.get_params())

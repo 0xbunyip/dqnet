@@ -35,26 +35,28 @@ class Experience:
 
 	def get_random_minibatch(self, mbsize):
 		assert self.len >= self.frames_per_state
-		next_state = np.zeros((mbsize, self.frames_per_state, self.height, self.width), dtype = np.uint8)
-		state = np.zeros((mbsize, self.frames_per_state, self.height, self.width), dtype = np.uint8)
+		states = np.zeros((mbsize, self.frames_per_state + 1, self.height, self.width), dtype = np.uint8)
 		action = np.zeros((mbsize, 1), dtype = np.uint8)
 		reward = np.zeros((mbsize, 1), dtype = np.int32)
 		terminal = np.zeros((mbsize, 1), dtype = np.bool_)
 
-		#print "Top =", self.top
 		cnt = 0
 		while cnt < mbsize:
-			start_id = self.rng.randint(1, self.len - self.frames_per_state + 1) + self.top * (self.len >= self.replay_mem_size)
+			start_id = self.rng.randint(1, self.len - self.frames_per_state + 1, mbsize - cnt) + self.top * (self.len >= self.replay_mem_size)
 			end_id = start_id + self.frames_per_state - 1
-			#print start_id, end_id, self.terminal.take(np.arange(start_id - 1, end_id - 1), mode = 'wrap')
-			if not np.any(self.terminal.take(np.arange(start_id - 1, end_id - 1), mode = 'wrap')):				
-				state[cnt, ...] = self.obs.take(np.arange(start_id - 1, end_id), axis = 0, mode = 'wrap')
-				action[cnt] = self.action.take(end_id - 1, mode = 'wrap')
-				reward[cnt] = self.reward.take(end_id - 1, mode = 'wrap')
-				terminal[cnt] = self.terminal.take(end_id - 1, mode = 'wrap')
-				next_state[cnt, ...] = self.obs.take(np.arange(start_id, end_id + 1), axis = 0, mode = 'wrap')
-				cnt += 1
-		return (state, action, reward, terminal, next_state)
+			not_terminal = [not np.any(self.terminal.take(np.arange(i - 1, j - 1), axis = 0, mode = 'wrap')) 
+								for i, j in zip(start_id, end_id)]
+			num_ok = np.sum(not_terminal)								
+			ids = np.asarray([range(start_id[i] - 1, end_id[i] + 1) for i, j in enumerate(not_terminal) if j == True], dtype = np.int32)
+			
+			states[cnt : cnt + num_ok, ...] = self.obs.take(ids.ravel(), axis = 0, mode = 'wrap')\
+							.reshape(num_ok, self.frames_per_state + 1, self.height, self.width)
+			tmp = self.action.take(end_id[not_terminal] - 1, mode = 'wrap')
+			action[cnt : cnt + num_ok] = self.action.take(end_id[not_terminal] - 1, mode = 'wrap').reshape(-1, 1)
+			reward[cnt : cnt + num_ok] = self.reward.take(end_id[not_terminal] - 1, mode = 'wrap').reshape(-1, 1)
+			terminal[cnt : cnt + num_ok] = self.terminal.take(end_id[not_terminal] - 1, mode = 'wrap').reshape(-1, 1)
+			cnt += np.sum(num_ok)
+		return (states, action, reward, terminal)
 
 def trivial_test():
 	np.random.seed(123)
