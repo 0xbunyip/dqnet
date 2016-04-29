@@ -22,7 +22,7 @@ class Network:
 		self.train_fn = None
 		self.evaluate_fn = None
 		self.validate_fn = None
-		self.dummy_state = None
+		self.shared_single = None
 		self.shared_states = None
 		self.shared_action = None
 		self.shared_reward = None
@@ -46,7 +46,7 @@ class Network:
 
 	def _build_simple_network(self, input_var, num_action, mbsize, channel, height, width):
 		network = lasagne.layers.InputLayer(
-			(mbsize, channel, height, width), input_var)
+			(None, channel, height, width), input_var)
 		network = lasagne.layers.Conv2DLayer(
 			network, num_filters = 3, filter_size = (2, 2), stride = (1, 1))
 		network = lasagne.layers.DenseLayer(
@@ -56,6 +56,9 @@ class Network:
 		return network
 
 	def compile_train_function(self, tnet):
+		self.shared_single = theano.shared(
+			np.zeros((1, self.channel + 1, self.height, self.width), 
+			dtype = np.float32))
 		self.shared_states = theano.shared(
 			np.zeros((self.mbsize, self.channel + 1, self.height, self.width), 
 			dtype = np.float32))
@@ -75,6 +78,14 @@ class Network:
 		terminal = T.col(dtype = 'int8')
 		next_state = T.tensor4(dtype = 'float32')
 
+		self.train_fn = self._compile_train_function(tnet, state, action, reward, terminal, next_state)
+		self.evaluate_fn = self._compile_evaluate_function(state)
+		self.validate_fn = self._compile_validate_function(state)		
+
+		# theano.printing.debugprint(self.train_fn)
+		print "Finished building train and evaluate function"
+
+	def _compile_train_function(self, tnet, state, action, reward, terminal, next_state):
 		train_givens = {
 			state : self.shared_states[:, :-1, :, :], 
 			action : self.shared_action, 
@@ -82,30 +93,38 @@ class Network:
 			terminal : self.shared_terminal, 
 			next_state : self.shared_states[:, 1:, :, :], 
 		}
-		
 		current_values_matrix = lasagne.layers.get_output(self.net, state)
-		current_values = current_values_matrix[T.arange(self.mbsize), action.reshape((-1, ))].reshape((-1, 1))
+		action_mask = T.eq(T.arange(self.num_action).reshape((1, -1)), action.reshape((-1, 1))).astype(theano.config.floatX)
+		current_values = T.sum(current_values_matrix * action_mask, axis = 1).reshape((-1, 1))
+		# current_values = current_values_matrix[T.arange(self.mbsize), action.reshape((-1, ))].reshape((-1, 1))
 
 		target_values_matrix = lasagne.layers.get_output(tnet.net, next_state)
-		bootstrap_values = T.max(target_values_matrix, axis = 1).reshape((-1, 1))
-		target_values = reward + self.discount * (T.ones_like(terminal) - terminal) * bootstrap_values		
+		bootstrap_values = T.max(target_values_matrix, axis = 1, keepdims = True)
+		terminal_floatX = terminal.astype(theano.config.floatX)
+		target_values = reward + self.discount * (T.ones_like(terminal_floatX) - terminal_floatX) * bootstrap_values		
 
 		error = target_values - current_values
 		loss = T.mean(error ** 2)
 		net_params = lasagne.layers.get_all_params(self.net)
 		updates = lasagne.updates.rmsprop(loss, net_params, learning_rate = Network.LEARNING_RATE)
-		self.train_fn = theano.function([], loss, updates = updates, givens = train_givens)
-		
-		only_state_givens = {state : self.shared_states[:, :-1, :, :]}
-		self.dummy_state = np.zeros(
-			(self.mbsize, self.channel + 1, self.height, self.width), 
-			dtype = np.float32)
-		action_to_take = T.argmax(current_values_matrix, axis = 1)
-		self.evaluate_fn = theano.function([], action_to_take, givens = only_state_givens)
 
-		max_action_values = T.max(current_values_matrix, axis = 1)
-		self.validate_fn = theano.function([], max_action_values, givens = only_state_givens)
-		print "Finished building train and evaluate function"
+		##########
+		# print(theano.pp(current_values_matrix))
+		# theano.printing.debugprint(terminal_floatX)
+
+		return theano.function([], loss, updates = updates, givens = train_givens)
+
+	def _compile_evaluate_function(self, state):
+		evaluate_givens = {state : self.shared_single}
+		action_values_matrix = lasagne.layers.get_output(self.net, state)
+		action_to_take = T.argmax(action_values_matrix, axis = 1)
+		return theano.function([], action_to_take, givens = evaluate_givens)
+
+	def _compile_validate_function(self, state):
+		validate_givens = {state : self.shared_states[:, :-1, :, :]}
+		action_values_matrix = lasagne.layers.get_output(self.net, state)
+		max_action_values = T.max(action_values_matrix, axis = 1)
+		return theano.function([], max_action_values, givens = validate_givens)
 
 	def train_one_minibatch(self, tnet, states, action, reward, terminal):
 		assert self.train_fn is not None
@@ -116,11 +135,10 @@ class Network:
 		loss = self.train_fn()
 		return loss
 
-	def get_action(self, state):
+	def get_action(self, single_state):
 		assert self.evaluate_fn is not None
-		self.dummy_state[0, :-1, :, :] = state / np.float32(Network.SCALE_FACTOR)
-		self.shared_states.set_value(self.dummy_state)
-		return self.evaluate_fn()[0]
+		self.shared_single.set_value(single_state[np.newaxis, ...] / np.float32(Network.SCALE_FACTOR))
+		return self.evaluate_fn()
 
 	def get_max_action_values(self, states):
 		assert self.validate_fn is not None

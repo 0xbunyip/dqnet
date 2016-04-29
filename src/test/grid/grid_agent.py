@@ -30,6 +30,7 @@ class Agent:
 		self.eps_decay_rate = (Agent.FINAL_EXPLORATION - Agent.INITIAL_EXPLORATION) / Agent.FINAL_EXPLORATION_FRAME
 
 		self.validate_states = None
+		# self.validate_states_origin = None
 		self.exp_train = Experience(Agent.REPLAY_MEMORY_SIZE, frame_height, frame_width, Agent.AGENT_HISTORY_LENGTH, rng)
 		self.exp_eval = Experience(Agent.AGENT_HISTORY_LENGTH, frame_height, frame_width, Agent.AGENT_HISTORY_LENGTH, rng)
 
@@ -69,6 +70,7 @@ class Agent:
 		if self.num_train_obs == Agent.REPLAY_START_SIZE:
 			print "Collect validation states"
 			self.validate_states, _, _, _, _ = self.exp_train.get_random_minibatch(self.validate_size)
+			# self.validate_states_origin = self.validate_states.copy()
 			print "Before training, average validate action values = %.3f" % (self.get_validate_values())
 
 		self.obs_episode += 1
@@ -79,11 +81,20 @@ class Agent:
 
 	def get_validate_values(self):
 		assert self.validate_states is not None
+		# assert np.allclose(self.validate_states, self.validate_states_origin)
 		sum_action_values = 0.0
 		for i in xrange(0, self.validate_size, self.mbsize):
-			states_minibatch = self.validate_states[i : min(self.validate_size, i + self.mbsize), ...]
+			last_id = min(self.validate_size, i + self.mbsize)
+			first_id = max(0, last_id - self.mbsize)
+			states_minibatch = self.validate_states[first_id : last_id, ...]
 			max_action_values = self.network.get_max_action_values(states_minibatch)
-			sum_action_values += np.sum(max_action_values)
+
+			if i + self.mbsize > self.validate_size:
+				# print max_action_values[-(self.validate_size - i):].shape
+				sum_action_values += np.sum(max_action_values[-(self.validate_size - i):])
+			else:
+				# print max_action_values.shape
+				sum_action_values += np.sum(max_action_values)
 		return sum_action_values / self.validate_size
 
 	def _train_one_minibatch(self):

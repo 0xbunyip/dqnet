@@ -34,6 +34,8 @@ class Network:
 			(mbsize, channel, height, width), input_var)
 		network = lasagne.layers.Conv2DLayer(
 			network, num_filters = 32, filter_size = (2, 2), stride = (1, 1))
+		network = lasagne.layers.Conv2DLayer(
+			network, num_filters = 64, filter_size = (2, 2), stride = (1, 1))
 		network = lasagne.layers.DenseLayer(
 			network, num_units = 512)
 		network = lasagne.layers.DenseLayer(

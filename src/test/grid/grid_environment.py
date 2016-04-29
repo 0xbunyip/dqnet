@@ -25,9 +25,10 @@ class Environment:
 	def get_action_count(self):
 		return len(self.minimal_actions)
 
-	def train(self, agent, epoch_count):
+	def train(self, agent, epoch_count, ask_for_more = False):
 		obs = np.zeros((Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH), dtype = np.uint8)
-		for epoch in xrange(epoch_count):
+		epoch = 0
+		while epoch < epoch_count:
 			steps_left = Environment.STEPS_PER_EPOCH
 
 			print "\n============================================"
@@ -41,6 +42,16 @@ class Environment:
 				episode += 1
 			avg_validate_values = agent.get_validate_values()
 			print "Finsihed epoch #%d, average validate action values = %.3f" % (epoch, avg_validate_values)
+
+			epoch += 1
+			if epoch >= epoch_count:
+				st = raw_input("\n***Enter number of epoch to continue training: ")
+				more_epoch = 0
+				try:
+					more_epoch = int(st)
+				except Exception, e:
+					more_epoch = 0
+				epoch_count += more_epoch
 
 		avg_reward = self.evaluate(agent, num_eval_episode = 10, obs = obs)
 		print "Number of frame seen:", agent.num_train_obs
@@ -70,7 +81,7 @@ class Environment:
 
 			if print_Q:
 				print "Observation = \n", np.int32(obs) - self.api.translate
-				print "Action %s = %d" % ("(random)" if is_random else "", self.minimal_actions[action_id])
+				print "Action%s = %d" % (" (random)" if is_random else "", self.minimal_actions[action_id])
 				raw_input()
 			
 			reward = self._repeat_action(self.minimal_actions[action_id], repeat_action)
