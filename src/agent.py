@@ -19,12 +19,13 @@ class Agent:
 	FINAL_EXPLORATION_FRAME = 3000
 
 	MINIBATCH_SIZE = 32
+	VALIDATION_SET_SIZE = 32
 
-	def __init__(self, num_action, frame_height, frame_width, validate_size, rng):
+	def __init__(self, num_action, frame_height, frame_width, rng):
 		self.rng = rng
 		self.num_action = num_action
 		self.mbsize = Agent.MINIBATCH_SIZE
-		self.validate_size = validate_size
+		self.validate_size = Agent.VALIDATION_SET_SIZE
 		self.num_train_obs = 0
 		self.obs_episode = 0
 		self.eps_decay_rate = (Agent.FINAL_EXPLORATION - Agent.INITIAL_EXPLORATION) / Agent.FINAL_EXPLORATION_FRAME
@@ -33,31 +34,31 @@ class Agent:
 		self.exp_train = Experience(Agent.REPLAY_MEMORY_SIZE, frame_height, frame_width, Agent.AGENT_HISTORY_LENGTH, rng)
 		self.exp_eval = Experience(Agent.AGENT_HISTORY_LENGTH, frame_height, frame_width, Agent.AGENT_HISTORY_LENGTH, rng)
 
-		self.network = Network(num_action, self.mbsize, Agent.AGENT_HISTORY_LENGTH, frame_height, frame_width, Agent.DISCOUNT_FACTOR)
-		self.tnetwork = Network(num_action, self.mbsize, Agent.AGENT_HISTORY_LENGTH, frame_height, frame_width, Agent.DISCOUNT_FACTOR)
+		self.network = Network(num_action, self.mbsize, Agent.AGENT_HISTORY_LENGTH, frame_height, frame_width, Agent.DISCOUNT_FACTOR, rng)
+		self.tnetwork = Network(num_action, self.mbsize, Agent.AGENT_HISTORY_LENGTH, frame_height, frame_width, Agent.DISCOUNT_FACTOR, rng)
 		self.network.compile_train_function(self.tnetwork)
 
 	def get_action(self, obs, eps = 0.0, evaluating = False):
 		random_action = self.rng.randint(self.num_action)
 		if self.obs_episode + 1 < Agent.AGENT_HISTORY_LENGTH:
 			# print "Starting episode, not enough frame (%d), action = %d" % (self.obs_episode + 1, random_action)
-			return random_action
+			return random_action, True
 
 		exp = self.exp_eval
 		if not evaluating:
 			exp = self.exp_train
 			if self.num_train_obs < Agent.REPLAY_START_SIZE:
 				# print "Start training, not enough experience (%d), action = %d" % (self.num_train_obs + 1, random_action)
-				return self.rng.randint(self.num_action)
+				return self.rng.randint(self.num_action), True
 			eps = Agent.INITIAL_EXPLORATION + self.eps_decay_rate * min(Agent.FINAL_EXPLORATION_FRAME, self.num_train_obs + 1)
 
 		if self.rng.rand() < eps:
 			# print "Uniform random action (obs = %d, eps = %.3f), action = %d" % (self.num_train_obs + 1, eps, random_action)
-			return self.rng.randint(self.num_action)
+			return self.rng.randint(self.num_action), True
 
 		action = self.network.get_action(exp.get_state(obs))
 		# print "Greedy action = %d" % (action)
-		return action
+		return action, False
 
 	def add_experience(self, obs, is_terminal, action, reward, evaluating = False):
 		exp = self.exp_eval
@@ -88,7 +89,7 @@ class Agent:
 	def _train_one_minibatch(self):
 		states, action, reward, terminal = self.exp_train.get_random_minibatch(self.mbsize)
 		if self.num_train_obs % Agent.TARGET_NETWORK_UPDATE_FREQUENCY == 0:
-			print "\tClone network at obs_count =", self.num_train_obs
+			# print "\tClone network at obs_count =", self.num_train_obs
 			self._clone_network()
 		loss = self.network.train_one_minibatch(self.tnetwork, states, action, reward, terminal)
 

@@ -1,8 +1,5 @@
 TODO:
-- Unify Random number generators
-- Add random actions at the start of each episode
-- Clip error term of Q-learning update to [-1, 1]
-- Clip reward of each step to [-1, 1]
+- Remove validation experiences from training experiences
 - Change RMSProp parameters
 - Test speed on GPU
 - Check CPU-GPU memory roundtrip
@@ -10,6 +7,12 @@ TODO:
 - Add function descriptions and comments
 - Move half experiences to GPU
 - Test Double Q-learning
+
+DOING:
+- Clip error term of Q-learning update to [-1, 1]
+- Clip reward of each step to [-1, 1]
+- Add random actions at the start of each episode
+- Unify Random number generators
 
 DONE:
 - Save network's weight and report loss/reward each epoch

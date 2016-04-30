@@ -9,16 +9,21 @@ class Network:
 	LEARNING_RATE = 0.0025
 	SCALE_FACTOR = 255.0
 
-	def __init__(self, num_action, mbsize, channel, height, width, discount):
+	def __init__(self, num_action, mbsize, channel, height, width, discount, rng):
 		self.num_action = num_action
 		self.height = height
 		self.width = width
 		self.mbsize = mbsize
 		self.channel = channel
 		self.discount = discount
+		self.rng = rng
+		lasagne.random.set_rng(rng)
 		self.input_var = T.tensor4()
-		#self.net = self._build_dqn(self.input_var, num_action, mbsize, channel, height, width)
-		self.net = self._build_simple_network(self.input_var, num_action, mbsize, channel, height, width)
+		# self.net = self._build_dqn(self.input_var, num_action, mbsize, channel, height, width)
+		# self.net = self._build_simple_network(self.input_var, num_action, mbsize, channel, height, width)
+		# self.net = self._build_bandit_network(self.input_var, num_action, mbsize, channel, height, width)
+		self.net = self._build_grid_network(self.input_var, num_action, mbsize, channel, height, width)
+		self.max_delta = Network.MAX_DELTA
 		self.train_fn = None
 		self.evaluate_fn = None
 		self.validate_fn = None
@@ -31,7 +36,7 @@ class Network:
 
 	def _build_dqn(self, input_var, num_action, mbsize, channel, height, width):
 		network = lasagne.layers.InputLayer(
-			(mbsize, channel, height, width), input_var)
+			(None, channel, height, width), input_var)
 		network = lasagne.layers.Conv2DLayer(
 			network, num_filters = 32, filter_size = (8, 8), stride = (4, 4))
 		network = lasagne.layers.Conv2DLayer(
@@ -55,9 +60,29 @@ class Network:
 			network, num_units = num_action, nonlinearity = None)
 		return network
 
+	def _build_bandit_network(self, input_var, num_action, mbsize, channel, height, width):
+		network = lasagne.layers.InputLayer(
+			(None, channel, height, width), input_var)
+		network = lasagne.layers.DenseLayer(
+			network, num_units = 256)
+		network = lasagne.layers.DenseLayer(
+			network, num_units = num_action, nonlinearity = None)
+		return network
+
+	def _build_grid_network(self, input_var, num_action, mbsize, channel, height, width):
+		network = lasagne.layers.InputLayer(
+			(None, channel, height, width), input_var)
+		network = lasagne.layers.Conv2DLayer(
+			network, num_filters = 32, filter_size = (2, 2), stride = (1, 1))
+		network = lasagne.layers.DenseLayer(
+			network, num_units = 512)
+		network = lasagne.layers.DenseLayer(
+			network, num_units = num_action, nonlinearity = None)
+		return network
+
 	def compile_train_function(self, tnet):
 		self.shared_single = theano.shared(
-			np.zeros((1, self.channel + 1, self.height, self.width), 
+			np.zeros((1, self.channel, self.height, self.width), 
 			dtype = np.float32))
 		self.shared_states = theano.shared(
 			np.zeros((self.mbsize, self.channel + 1, self.height, self.width), 
@@ -104,7 +129,13 @@ class Network:
 		target_values = reward + self.discount * (T.ones_like(terminal_floatX) - terminal_floatX) * bootstrap_values		
 
 		error = target_values - current_values
-		loss = T.mean(error ** 2)
+		if self.max_delta > 0:
+			quadratic_term = T.minimum(abs(error), self.max_delta)
+			linear_term = abs(error) - quadratic_term
+			loss = T.sum(0.5 * quadratic_term ** 2 + linear_term * self.max_delta)
+		else:
+			loss = T.sum(0.5 * error ** 2)
+
 		net_params = lasagne.layers.get_all_params(self.net)
 		updates = lasagne.updates.rmsprop(loss, net_params, learning_rate = Network.LEARNING_RATE)
 
@@ -115,16 +146,15 @@ class Network:
 		return theano.function([], loss, updates = updates, givens = train_givens)
 
 	def _compile_evaluate_function(self, state):
-		evaluate_givens = {state : self.shared_single}
 		action_values_matrix = lasagne.layers.get_output(self.net, state)
-		action_to_take = T.argmax(action_values_matrix, axis = 1)
-		return theano.function([], action_to_take, givens = evaluate_givens)
+		action_to_take = T.argmax(action_values_matrix, axis = 1)[0]
+		return theano.function([], action_to_take, givens = {state : self.shared_single})
 
 	def _compile_validate_function(self, state):
-		validate_givens = {state : self.shared_states[:, :-1, :, :]}
 		action_values_matrix = lasagne.layers.get_output(self.net, state)
 		max_action_values = T.max(action_values_matrix, axis = 1)
-		return theano.function([], max_action_values, givens = validate_givens)
+		return theano.function([], max_action_values, \
+			givens = {state : self.shared_states[:, :-1, :, :]})
 
 	def train_one_minibatch(self, tnet, states, action, reward, terminal):
 		assert self.train_fn is not None

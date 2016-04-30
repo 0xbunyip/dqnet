@@ -17,16 +17,21 @@ class Environment:
 	FRAME_HEIGHT = 8
 	FRAME_WIDTH = 8
 
-	def __init__(self, rom_name, display_screen = False):
+	MAX_REWARD = 0
+	MAX_NO_OP = 30
+
+	def __init__(self, rom_name, rng, display_screen = False):
 		self.api = ALEInterface()
 		self.api.setInt('random_seed', 123)
 		self.api.setBool('display_screen', display_screen)
 		self.rom_name = rom_name
+		self.rng = rng
 		print '../rom/' + self.rom_name
 		self.api.loadROM('../rom/' + self.rom_name)
 		self.minimal_actions = self.api.getMinimalActionSet()
 		self.merge_frame = np.zeros((2, Environment.ORIGINAL_HEIGHT, Environment.ORIGINAL_WIDTH), dtype = np.uint8)
 		self.merge_id = 0
+		self.max_reward = Environment.MAX_REWARD
 		self.log_dir = ''
 
 	def get_action_count(self):
@@ -75,15 +80,21 @@ class Environment:
 	def _run_episode(self, agent, steps_left, obs, eps = 0.0, evaluating = False):
 		self.api.reset_game()		
 		starting_lives = self.api.lives()
-		is_terminal = False
 		step_count = 0
 		sum_reward = 0
 
+		if evaluating and Environment.MAX_NO_OP > 0:
+			for _ in xrange(self.rng.randint(Environment.MAX_NO_OP) + 1):
+				self.api.act(0)
+
+		is_terminal = self.api.game_over() or (self.api.lives() < starting_lives)
 		while step_count < steps_left and not is_terminal:
 			self._get_screen(obs)
-			action_id = agent.get_action(obs, eps, evaluating)
+			action_id, _ = agent.get_action(obs, eps, evaluating)
 			
 			reward = self._repeat_action(self.minimal_actions[action_id])
+			if not evaluating and self.max_reward > 0:
+				reward = np.clip(reward, -self.max_reward, self.max_reward)
 			is_terminal = self.api.game_over() or (self.api.lives() < starting_lives) or (step_count + 1 >= steps_left)
 			agent.add_experience(obs, is_terminal, action_id, reward, evaluating)
 
@@ -134,8 +145,8 @@ class Environment:
 			f.write("%d,%d,%.3f,%.0f,%.2f,%.0f\n" % (epoch, episode, validate_values, \
 				total_train_time, total_train_time * 1.0 / Environment.STEPS_PER_EPOCH, total_validate_time))
 
-		with open(self.log_dir + ('/network_params_%03d' % (epoch)) + '.pkl', 'w') as f:
-			cPickle.dump(agent.network, f, -1)
+		# with open(self.log_dir + ('/network_params_%03d' % (epoch)) + '.pkl', 'w') as f:
+		# 	cPickle.dump(agent.network, f, -1)
 
 	def _write_info(self, f, c):
 		hyper_params = [attr for attr in dir(c) \

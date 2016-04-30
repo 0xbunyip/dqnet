@@ -33,11 +33,10 @@ class BanditGame():
 
 	def getScreenGrayscale(self, obs):
 		if self.one_state:
-			np.copyto(dst = obs, src = np.zeros((5, 5), dtype = np.uint8))
+			np.copyto(dst = obs, src = np.zeros((self.height, self.width), dtype = np.uint8))
 		else:
 			np.copyto(dst = obs, src = self.grid)
 		
-
 	def reset_game(self):
 		self.acted = False
 		self._reset_game_grid()
