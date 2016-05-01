@@ -20,6 +20,8 @@ class Environment:
 	MAX_REWARD = 0
 	MAX_NO_OP = 30
 
+	EPOCH_COUNT = 2
+
 	def __init__(self, rom_name, rng, display_screen = False):
 		self.api = ALEInterface()
 		self.api.setInt('random_seed', 123)
@@ -33,13 +35,15 @@ class Environment:
 		self.merge_id = 0
 		self.max_reward = Environment.MAX_REWARD
 		self.log_dir = ''
+		self.network_dir = ''
 
 	def get_action_count(self):
 		return len(self.minimal_actions)
 
-	def train(self, agent, epoch_count):
+	def train(self, agent):
 		self._open_log_files(agent)
 		obs = np.zeros((Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH), dtype = np.uint8)
+		epoch_count = Environment.EPOCH_COUNT
 		for epoch in xrange(epoch_count):
 			steps_left = Environment.STEPS_PER_EPOCH
 
@@ -62,10 +66,7 @@ class Environment:
 			print "Finished epoch #%d, episode trained = %d, validate values = %.3f, train time = %.0fs, validate time = %.0fs" \
 					% (epoch, episode, avg_validate_values, total_train_time, total_validate_time)
 			self._update_log_files(agent, epoch + 1, episode, avg_validate_values, total_train_time, total_validate_time)
-
 		print "Number of frame seen:", agent.num_train_obs
-		avg_reward = self.evaluate(agent, num_eval_episode = 1, obs = obs)
-		print "Test average reward = %.3f" % (avg_reward)
 
 	def evaluate(self, agent, num_eval_episode = 30, eps = 0.05, obs = None):
 		print "\n***Start evaluating"
@@ -75,6 +76,7 @@ class Environment:
 		for episode in xrange(num_eval_episode):
 			_, reward = self._run_episode(agent, Environment.STEPS_PER_EPISODE, obs, eps, evaluating = True)
 			sum_reward += reward
+		print "Average evaluating reward = %.4f" % (sum_reward / num_eval_episode)
 		return sum_reward / num_eval_episode
 
 	def _run_episode(self, agent, steps_left, obs, eps = 0.0, evaluating = False):
@@ -123,11 +125,17 @@ class Environment:
 		time_str = time.strftime("_%m-%d-%H-%M", time.localtime())
 		base_rom_name = os.path.splitext(os.path.basename(self.rom_name))[0]
 		self.log_dir = '../run_results/' + base_rom_name + time_str
+		self.network_dir = self.log_dir + '/network'
 
 		try:
 			os.stat(self.log_dir)
 		except OSError:
 			os.makedirs(self.log_dir)
+
+		try:
+			os.stat(self.network_dir)
+		except OSError:
+			os.makedirs(self.network_dir)
 
 		with open(self.log_dir + '/info.txt', 'w') as f:
 			self._write_info(f, Environment)
@@ -142,11 +150,12 @@ class Environment:
 	def _update_log_files(self, agent, epoch, episode, validate_values, total_train_time, total_validate_time):
 		print "Updating log files"
 		with open(self.log_dir + '/results.csv', 'a') as f:
-			f.write("%d,%d,%.3f,%.0f,%.2f,%.0f\n" % (epoch, episode, validate_values, \
+			f.write("%d,%d,%.4f,%.0f,%.4f,%.0f\n" % (epoch, episode, validate_values, \
 				total_train_time, total_train_time * 1.0 / Environment.STEPS_PER_EPOCH, total_validate_time))
 
-		# with open(self.log_dir + ('/network_params_%03d' % (epoch)) + '.pkl', 'w') as f:
-		# 	cPickle.dump(agent.network, f, -1)
+		with open(self.network_dir + ('/network_params_%03d' % (epoch)) + '.pkl', 'w') as f:
+			cPickle.dump(agent.network, f, -1)
+			cPickle.dump(agent.tnetwork, f, -1)
 
 	def _write_info(self, f, c):
 		hyper_params = [attr for attr in dir(c) \

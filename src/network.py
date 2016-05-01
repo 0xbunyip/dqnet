@@ -64,7 +64,7 @@ class Network:
 		network = lasagne.layers.InputLayer(
 			(None, channel, height, width), input_var)
 		network = lasagne.layers.DenseLayer(
-			network, num_units = 256)
+			network, num_units = 128)
 		network = lasagne.layers.DenseLayer(
 			network, num_units = num_action, nonlinearity = None)
 		return network

@@ -4,12 +4,15 @@ from environment import Environment
 from agent import Agent
 from network import Network
 import numpy as np
+import argparse
+import sys
 
 ############### Hyper-parameters ###############
+Environment.EPOCH_COUNT = 2
 Environment.FRAMES_SKIP = 4
 Environment.FRAME_HEIGHT = 8
 Environment.FRAME_WIDTH = 8
-Environment.MAX_NO_OP = 30
+Environment.MAX_NO_OP = 0
 Environment.MAX_REWARD = 0
 Environment.ORIGINAL_HEIGHT = 210
 Environment.ORIGINAL_WIDTH = 160
@@ -33,11 +36,31 @@ Network.MAX_DELTA = 1.0
 Network.SCALE_FACTOR = 255.0
 ################################################
 
-def main():
+def get_arguments(argv):
+	parser = argparse.ArgumentParser(description = 'Train/Evaluate deep Q-network')
+	parser.add_argument('-r', '--rom', dest = 'rom_name', default = 'breakout.bin'
+		, help = 'ROM file name without path (default: %(default)s)')
+	parser.add_argument('-e', '--evaluate-only', dest = 'evaluating', default = 0, type = int
+		, help = 'Enable evaluating process (default: %(default)s)')
+	parser.add_argument('-d', '--display-screen', dest = 'display_screen', default = 0, type = int
+		, help = 'Display screen while evaluating')
+	parser.add_argument('-f', '--file-network', dest = 'network_file', default = None
+		, help = 'Network file to load from')
+	return parser.parse_args(argv)
+
+def main(argv):
 	rng = np.random.RandomState(123)
-	env = Environment(rom_name = 'breakout.bin', rng = rng, display_screen = False)
-	agn = Agent(env.get_action_count(), Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH, rng)
-	env.train(agn, epoch_count = 2)
+	arg = get_arguments(argv)
+
+	if not arg.evaluating:
+		env = Environment(arg.rom_name, rng, display_screen = bool(arg.display_screen))
+		agn = Agent(env.get_action_count(), Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH, rng)
+		env.train(agn)
+		env.evaluate(agn)
+	elif arg.network_file is not None:
+		env = Environment(arg.rom_name, rng, display_screen = bool(arg.display_screen))
+		agn = Agent(env.get_action_count(), Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH, rng, arg.network_file)
+		env.evaluate(agn)
 
 if __name__ == '__main__':
-	main()
+	main(sys.argv[1:])

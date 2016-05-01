@@ -20,23 +20,28 @@ class Environment:
 	MAX_REWARD = 0
 	MAX_NO_OP = 0
 
+	EPOCH_COUNT = 2
+
 	def __init__(self, rng, display_screen = False):
 		self.api = GridGame(Environment.ORIGINAL_HEIGHT, Environment.ORIGINAL_WIDTH, rng)
-		self.agent = None
+		self.rng = rng
+		self.display_screen = display_screen
 		self.minimal_actions = self.api.getMinimalActionSet()
 		self.merge_frame = np.zeros((1, Environment.ORIGINAL_HEIGHT, Environment.ORIGINAL_WIDTH), dtype = np.uint8)
 		self.merge_id = 0
 		self.max_reward = Environment.MAX_REWARD
 		self.log_dir = ''
+		self.network_dir = ''
 		print self.minimal_actions
 
 	def get_action_count(self):
 		return len(self.minimal_actions)
 
-	def train(self, agent, epoch_count, ask_for_more = False):
+	def train(self, agent, ask_for_more = False):
 		self._open_log_files(agent)
 		obs = np.zeros((Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH), dtype = np.uint8)
 		epoch = 0
+		epoch_count = Environment.EPOCH_COUNT
 		while epoch < epoch_count:
 			steps_left = Environment.STEPS_PER_EPOCH
 
@@ -68,10 +73,12 @@ class Environment:
 				except Exception, e:
 					more_epoch = 0
 				epoch_count += more_epoch
-
+		# CHECK NETWORK LOADING
+		# with open('train_last.txt', 'w') as f:
+		# 	params = agent.network.get_params()
+		# 	for param in params:
+		# 		f.write(str(np.round(param, 4).tolist()) + '\n')
 		print "Number of frame seen:", agent.num_train_obs
-		avg_reward = self.evaluate(agent, num_eval_episode = 10, obs = obs)
-		print "Test average reward = %.3f" % (avg_reward)
 
 	def evaluate(self, agent, num_eval_episode = 30, eps = 0.05, obs = None):
 		print "\n***Start evaluating"
@@ -80,8 +87,9 @@ class Environment:
 		sum_reward = 0.0
 		for episode in xrange(num_eval_episode):
 			print "New evaluating episode"
-			_, reward = self._run_episode(agent, Environment.STEPS_PER_EPISODE, obs, eps, evaluating = True, print_Q = True)
+			_, reward = self._run_episode(agent, Environment.STEPS_PER_EPISODE, obs, eps, evaluating = True, print_Q = self.display_screen)
 			sum_reward += reward
+		print "Average evaluating reward = %.4f" % (sum_reward / num_eval_episode)
 		return sum_reward / num_eval_episode
 
 	def _run_episode(self, agent, steps_left, obs, eps = 0.0, evaluating = False, print_Q = False):
@@ -135,11 +143,17 @@ class Environment:
 		time_str = time.strftime("_%m-%d-%H-%M", time.localtime())
 		base_rom_name = 'grid'
 		self.log_dir = '../run_results/grid/' + base_rom_name + time_str
+		self.network_dir = self.log_dir + '/network'
 
 		try:
 			os.stat(self.log_dir)
 		except OSError:
 			os.makedirs(self.log_dir)
+
+		try:
+			os.stat(self.network_dir)
+		except OSError:
+			os.makedirs(self.network_dir)
 
 		with open(self.log_dir + '/info.txt', 'w') as f:
 			self._write_info(f, Environment)
@@ -157,8 +171,9 @@ class Environment:
 			f.write("%d,%d,%.4f,%.0f,%.4f,%.0f\n" % (epoch, episode, validate_values, \
 				total_train_time, total_train_time * 1.0 / Environment.STEPS_PER_EPOCH, total_validate_time))
 
-		# with open(self.log_dir + ('/network_params_%03d' % (epoch)) + '.pkl', 'w') as f:
-		# 	cPickle.dump(agent.network, f, -1)
+		with open(self.network_dir + ('/network_params_%03d' % (epoch)) + '.pkl', 'w') as f:
+			cPickle.dump(agent.network, f, -1)
+			cPickle.dump(agent.tnetwork, f, -1)
 
 	def _write_info(self, f, c):
 		hyper_params = [attr for attr in dir(c) \

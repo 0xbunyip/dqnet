@@ -1,4 +1,5 @@
 import numpy as np
+import cPickle
 from experience import Experience
 from network import Network
 
@@ -21,7 +22,7 @@ class Agent:
 	MINIBATCH_SIZE = 32
 	VALIDATION_SET_SIZE = 32
 
-	def __init__(self, num_action, frame_height, frame_width, rng):
+	def __init__(self, num_action, frame_height, frame_width, rng, load_network_from = None):
 		self.rng = rng
 		self.num_action = num_action
 		self.mbsize = Agent.MINIBATCH_SIZE
@@ -34,9 +35,19 @@ class Agent:
 		self.exp_train = Experience(Agent.REPLAY_MEMORY_SIZE, frame_height, frame_width, Agent.AGENT_HISTORY_LENGTH, rng)
 		self.exp_eval = Experience(Agent.AGENT_HISTORY_LENGTH, frame_height, frame_width, Agent.AGENT_HISTORY_LENGTH, rng)
 
-		self.network = Network(num_action, self.mbsize, Agent.AGENT_HISTORY_LENGTH, frame_height, frame_width, Agent.DISCOUNT_FACTOR, rng)
-		self.tnetwork = Network(num_action, self.mbsize, Agent.AGENT_HISTORY_LENGTH, frame_height, frame_width, Agent.DISCOUNT_FACTOR, rng)
-		self.network.compile_train_function(self.tnetwork)
+		if load_network_from is None:
+			self.network = Network(num_action, self.mbsize, Agent.AGENT_HISTORY_LENGTH, frame_height, frame_width, Agent.DISCOUNT_FACTOR, rng)
+			self.tnetwork = Network(num_action, self.mbsize, Agent.AGENT_HISTORY_LENGTH, frame_height, frame_width, Agent.DISCOUNT_FACTOR, rng)
+			self.network.compile_train_function(self.tnetwork)
+		else:
+			with open(load_network_from) as f:
+				self.network = cPickle.load(f)
+				self.tnetwork = cPickle.load(f)
+				# CHECK NETWORK LOADING
+				# with open('eval_last.txt', 'w') as f2:
+				# 	params = self.network.get_params()
+				# 	for param in params:
+				# 		f2.write(str(np.round(param, 4).tolist()) + '\n')
 
 	def get_action(self, obs, eps = 0.0, evaluating = False):
 		random_action = self.rng.randint(self.num_action)

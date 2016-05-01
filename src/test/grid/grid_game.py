@@ -3,7 +3,7 @@ import numpy as np
 class GridGame():
 	"""docstring for GridGame"""
 
-	MAX_MEAN = 5
+	MAX_MEAN = 0
 	MAX_VAR = 3
 
 	DX = [-1, 0, 1, 0]
