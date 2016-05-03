@@ -8,32 +8,35 @@ import argparse
 import sys
 
 ############### Hyper-parameters ###############
-Environment.EPOCH_COUNT = 2
+Environment.EPOCH_COUNT = 200
 Environment.FRAMES_SKIP = 4
-Environment.FRAME_HEIGHT = 8
-Environment.FRAME_WIDTH = 8
-Environment.MAX_NO_OP = 0
-Environment.MAX_REWARD = 0
+Environment.FRAME_HEIGHT = 84
+Environment.FRAME_WIDTH = 84
+Environment.MAX_NO_OP = 30
+Environment.MAX_REWARD = 1
 Environment.ORIGINAL_HEIGHT = 210
 Environment.ORIGINAL_WIDTH = 160
-Environment.STEPS_PER_EPISODE = 100
-Environment.STEPS_PER_EPOCH = 200
+Environment.STEPS_PER_EPISODE = 18000
+Environment.STEPS_PER_EPOCH = 50000
 
 Agent.AGENT_HISTORY_LENGTH = 4
-Agent.DISCOUNT_FACTOR = 0.99
+Agent.DISCOUNT_FACTOR = 0.95
 Agent.FINAL_EXPLORATION = 0.1
-Agent.FINAL_EXPLORATION_FRAME = 100
+Agent.FINAL_EXPLORATION_FRAME = 1000000
 Agent.INITIAL_EXPLORATION = 1.0
 Agent.MINIBATCH_SIZE = 32
-Agent.REPLAY_MEMORY_SIZE = 100
-Agent.REPLAY_START_SIZE = 50
-Agent.TARGET_NETWORK_UPDATE_FREQUENCY = 50
+Agent.REPLAY_MEMORY_SIZE = 1000000
+Agent.REPLAY_START_SIZE = 50000
+Agent.TARGET_NETWORK_UPDATE_FREQUENCY = 10000
 Agent.UPDATE_FREQUENCY = 4
-Agent.VALIDATION_SET_SIZE = 32 # MINIBATCH_SIZE <= VALIDATION_SET_SIZE <= REPLAY_START_SIZE * AGENT_HISTORY_LENGTH
+Agent.VALIDATION_SET_SIZE = 2048 # MINIBATCH_SIZE <= VALIDATION_SET_SIZE <= REPLAY_START_SIZE * AGENT_HISTORY_LENGTH
 
-Network.LEARNING_RATE = 0.0025
-Network.MAX_DELTA = 1.0
+Network.GRAD_MOMENTUM = 0.95
+Network.LEARNING_RATE = 0.00025
+Network.MAX_ERROR = 1.0
+Network.MIN_SQR_GRAD = 0.01
 Network.SCALE_FACTOR = 255.0
+Network.SQR_GRAD_MOMENTUM = 0.95
 ################################################
 
 def get_arguments(argv):
@@ -64,3 +67,4 @@ def main(argv):
 
 if __name__ == '__main__':
 	main(sys.argv[1:])
+	

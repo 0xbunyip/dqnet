@@ -45,7 +45,7 @@ class Environment:
 			steps_left = Environment.STEPS_PER_EPOCH
 
 			print "\n============================================"
-			print "Epoch #%d" % epoch
+			print "Epoch #%d" % (epoch + 1)
 			episode = 0
 			epoch_start = time.time()
 			while steps_left > 0:
@@ -61,7 +61,7 @@ class Environment:
 			total_train_time = epoch_end - epoch_start
 			total_validate_time = validate_end - epoch_end
 			print "Finished epoch #%d, episode trained = %d, validate values = %.3f, train time = %.0fs, validate time = %.0fs" \
-					% (epoch, episode, avg_validate_values, total_train_time, total_validate_time)
+					% (epoch + 1, episode, avg_validate_values, total_train_time, total_validate_time)
 			self._update_log_files(agent, epoch + 1, episode, avg_validate_values, total_train_time, total_validate_time)
 		print "Number of frame seen:", agent.num_train_obs
 
@@ -153,7 +153,7 @@ class Environment:
 		print "Updating log files"
 		with open(self.log_dir + '/results.csv', 'a') as f:
 			f.write("%d,%d,%.4f,%.0f,%.4f,%.0f\n" % (epoch, episode, validate_values, \
-				total_train_time, total_train_time * 1.0 / Environment.STEPS_PER_EPOCH, total_validate_time))
+				total_train_time, Environment.STEPS_PER_EPOCH * 1.0 / total_train_time, total_validate_time))
 
 		with open(self.network_dir + ('/network_params_%03d' % (epoch)) + '.pkl', 'w') as f:
 			cPickle.dump(agent.network, f, -1)

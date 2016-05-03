@@ -1,6 +1,4 @@
 TODO:
-- Remove validation experiences from training experiences
-- Change RMSProp parameters
 - Test speed on GPU
 - Check CPU-GPU memory roundtrip
 - Clean up code, shorten params' names
@@ -9,6 +7,7 @@ TODO:
 - Test Double Q-learning
 
 DONE:
+- Implement RMSProp
 - Test loading network params
 - Allow display game screen while evaluating
 - Clip error term of Q-learning update to [-1, 1]
@@ -18,7 +17,7 @@ DONE:
 - Save network's weight and report loss/reward each epoch
 - Add basic timing module
 - Do action and terminal masking instead of fancy indexing in network
-- Use 2 function with different minibatch sizes OR use None for minibatch sizes
+- Use None for minibatch sizes
 - Join state and next_state of returned experience
 - Get multiple indices for each iteration in get_random_minibatch
 - Add evaluation module

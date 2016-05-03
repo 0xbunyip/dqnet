@@ -1,0 +1,10 @@
+[global]
+floatX = float32
+device = gpu0
+allow_gc = True
+
+[lib]
+cnmem = 1
+
+[nvcc]
+fastmath = True

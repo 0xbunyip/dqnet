@@ -9,7 +9,7 @@ from network import Network
 import numpy as np
 
 ############### Hyper-parameters ###############
-Environment.EPOCH_COUNT = 5
+Environment.EPOCH_COUNT = 10
 Environment.FRAMES_SKIP = 1
 Environment.FRAME_HEIGHT = 3
 Environment.FRAME_WIDTH = 3
@@ -23,7 +23,7 @@ Environment.STEPS_PER_EPOCH = 10000
 Agent.AGENT_HISTORY_LENGTH = 1
 Agent.DISCOUNT_FACTOR = 0.99
 Agent.FINAL_EXPLORATION = 0.1
-Agent.FINAL_EXPLORATION_FRAME = 30000
+Agent.FINAL_EXPLORATION_FRAME = 50000
 Agent.INITIAL_EXPLORATION = 1.0
 Agent.MINIBATCH_SIZE = 32
 Agent.REPLAY_MEMORY_SIZE = 50000
@@ -32,9 +32,12 @@ Agent.TARGET_NETWORK_UPDATE_FREQUENCY = 10000
 Agent.UPDATE_FREQUENCY = 4
 Agent.VALIDATION_SET_SIZE = 256 # MINIBATCH_SIZE <= VALIDATION_SET_SIZE <= REPLAY_START_SIZE * AGENT_HISTORY_LENGTH
 
+Network.GRAD_MOMENTUM = 0.95
 Network.LEARNING_RATE = 0.0025
-Network.MAX_DELTA = 0.0
+Network.MAX_ERROR = 0.0
+Network.MIN_SQR_GRAD = 0.01
 Network.SCALE_FACTOR = 20.0
+Network.SQR_GRAD_MOMENTUM = 0.95
 ################################################
 
 def get_arguments(argv):

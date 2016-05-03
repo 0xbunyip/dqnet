@@ -2,12 +2,17 @@ import numpy as np
 import lasagne
 import theano
 import theano.tensor as T
+from collections import OrderedDict
 
 class Network:
 	"""docstring for Network"""
 
 	LEARNING_RATE = 0.0025
+	GRAD_MOMENTUM = 0.95
+	SQR_GRAD_MOMENTUM = 0.95
+	MIN_SQR_GRAD = 0.01
 	SCALE_FACTOR = 255.0
+	MAX_ERROR = 1.0
 
 	def __init__(self, num_action, mbsize, channel, height, width, discount, rng):
 		self.num_action = num_action
@@ -23,7 +28,7 @@ class Network:
 		# self.net = self._build_simple_network(self.input_var, num_action, mbsize, channel, height, width)
 		# self.net = self._build_bandit_network(self.input_var, num_action, mbsize, channel, height, width)
 		self.net = self._build_grid_network(self.input_var, num_action, mbsize, channel, height, width)
-		self.max_delta = Network.MAX_DELTA
+		self.max_error = np.float32(Network.MAX_ERROR)
 		self.train_fn = None
 		self.evaluate_fn = None
 		self.validate_fn = None
@@ -63,6 +68,8 @@ class Network:
 	def _build_bandit_network(self, input_var, num_action, mbsize, channel, height, width):
 		network = lasagne.layers.InputLayer(
 			(None, channel, height, width), input_var)
+		network = lasagne.layers.DenseLayer(
+			network, num_units = 128)
 		network = lasagne.layers.DenseLayer(
 			network, num_units = 128)
 		network = lasagne.layers.DenseLayer(
@@ -129,21 +136,45 @@ class Network:
 		target_values = reward + self.discount * (T.ones_like(terminal_floatX) - terminal_floatX) * bootstrap_values		
 
 		error = target_values - current_values
-		if self.max_delta > 0:
-			quadratic_term = T.minimum(abs(error), self.max_delta)
+		if self.max_error > 0:
+			quadratic_term = T.minimum(abs(error), self.max_error)
 			linear_term = abs(error) - quadratic_term
-			loss = T.sum(0.5 * quadratic_term ** 2 + linear_term * self.max_delta)
+			loss = T.sum(0.5 * quadratic_term ** 2 + linear_term * self.max_error)
 		else:
 			loss = T.sum(0.5 * error ** 2)
 
 		net_params = lasagne.layers.get_all_params(self.net)
-		updates = lasagne.updates.rmsprop(loss, net_params, learning_rate = Network.LEARNING_RATE)
-
-		##########
-		# print(theano.pp(current_values_matrix))
-		# theano.printing.debugprint(terminal_floatX)
+		# updates = lasagne.updates.rmsprop(loss, net_params, learning_rate = Network.LEARNING_RATE)
+		updates = self._get_rmsprop_updates(loss, net_params, 
+			lr = Network.LEARNING_RATE, grad_momentum = Network.GRAD_MOMENTUM, 
+			sqr_momentum = Network.SQR_GRAD_MOMENTUM, min_grad = Network.MIN_SQR_GRAD)
 
 		return theano.function([], loss, updates = updates, givens = train_givens)
+
+	def _get_rmsprop_updates(self, loss, params, lr, grad_momentum, sqr_momentum, min_grad):
+		# Modified from the Lasagne package:
+		# 	https://github.com/Lasagne/Lasagne/blob/master/lasagne/updates.py
+
+		grads = theano.grad(loss, params)
+		updates = OrderedDict()
+
+		# Using theano constant to prevent upcasting of float32
+		one = T.constant(1)
+		for param, grad in zip(params, grads):
+			value = param.get_value(borrow=True)
+			accu_sqr = theano.shared(np.zeros(value.shape, dtype=value.dtype),
+				broadcastable=param.broadcastable)
+			accu_sqr_new = sqr_momentum * accu_sqr + (one - sqr_momentum) * grad ** 2
+
+			accu = theano.shared(np.zeros(value.shape, dtype=value.dtype),
+				broadcastable=param.broadcastable)
+			accu_new = grad_momentum * accu + (one - grad_momentum) * grad
+
+			updates[accu] = accu_new
+			updates[accu_sqr] = accu_sqr_new
+			updates[param] = param - (lr * grad /
+				T.sqrt(accu_sqr_new - accu_new ** 2 + min_grad))
+		return updates
 
 	def _compile_evaluate_function(self, state):
 		action_values_matrix = lasagne.layers.get_output(self.net, state)

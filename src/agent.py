@@ -28,7 +28,6 @@ class Agent:
 		self.mbsize = Agent.MINIBATCH_SIZE
 		self.validate_size = Agent.VALIDATION_SET_SIZE
 		self.num_train_obs = 0
-		self.obs_episode = 0
 		self.eps_decay_rate = (Agent.FINAL_EXPLORATION - Agent.INITIAL_EXPLORATION) / Agent.FINAL_EXPLORATION_FRAME
 
 		self.validate_states = None
@@ -50,22 +49,23 @@ class Agent:
 				# 		f2.write(str(np.round(param, 4).tolist()) + '\n')
 
 	def get_action(self, obs, eps = 0.0, evaluating = False):
-		random_action = self.rng.randint(self.num_action)
-		if self.obs_episode + 1 < Agent.AGENT_HISTORY_LENGTH:
-			# print "Starting episode, not enough frame (%d), action = %d" % (self.obs_episode + 1, random_action)
+		exp = self.exp_eval if evaluating else self.exp_train
+		if not exp.can_get_state():
+			random_action = self.rng.randint(self.num_action)
+			# print "Starting episode, not enough frame (%d), action = %d" % (exp.obs_episode + 1, random_action)
 			return random_action, True
 
-		exp = self.exp_eval
 		if not evaluating:
-			exp = self.exp_train
 			if self.num_train_obs < Agent.REPLAY_START_SIZE:
+				random_action = self.rng.randint(self.num_action)
 				# print "Start training, not enough experience (%d), action = %d" % (self.num_train_obs + 1, random_action)
-				return self.rng.randint(self.num_action), True
+				return random_action, True
 			eps = Agent.INITIAL_EXPLORATION + self.eps_decay_rate * min(Agent.FINAL_EXPLORATION_FRAME, self.num_train_obs + 1)
 
 		if self.rng.rand() < eps:
+			random_action = self.rng.randint(self.num_action)
 			# print "Uniform random action (obs = %d, eps = %.3f), action = %d" % (self.num_train_obs + 1, eps, random_action)
-			return self.rng.randint(self.num_action), True
+			return random_action, True
 
 		action = self.network.get_action(exp.get_state(obs))
 		# print "Greedy action = %d" % (action)
@@ -78,14 +78,11 @@ class Agent:
 			self.num_train_obs += 1
 		exp.add_experience(obs, is_terminal, action, reward)
 
-		if self.num_train_obs == Agent.REPLAY_START_SIZE:
+		if self.num_train_obs == Agent.REPLAY_START_SIZE and self.validate_states is None:
 			print "Collect validation states"
 			self.validate_states, _, _, _ = self.exp_train.get_random_minibatch(self.validate_size)
 
-		self.obs_episode += 1
-		if is_terminal:
-			self.obs_episode = 0
-		if not evaluating and (self.num_train_obs % Agent.UPDATE_FREQUENCY == 0) and self.num_train_obs >= Agent.REPLAY_START_SIZE:
+		if not evaluating and self.num_train_obs >= Agent.REPLAY_START_SIZE and (self.num_train_obs % Agent.UPDATE_FREQUENCY == 0):
 			self._train_one_minibatch()
 
 	def get_validate_values(self):
