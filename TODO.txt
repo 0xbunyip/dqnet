@@ -1,4 +1,5 @@
 TODO:
+- Choose network type from run file or from runtime arguments
 - Test speed on GPU
 - Check CPU-GPU memory roundtrip
 - Clean up code, shorten params' names
@@ -7,6 +8,11 @@ TODO:
 - Test Double Q-learning
 
 DONE:
+- Fix RNG bug in test games
+- Add network description to info file
+- Join network and target_network in 1 class
+- Reduce network's weights file size by pickling only numpy arrays
+- Initialize network weights using HeUniform
 - Implement RMSProp
 - Test loading network params
 - Allow display game screen while evaluating

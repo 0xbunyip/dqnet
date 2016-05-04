@@ -28,7 +28,7 @@ Agent.INITIAL_EXPLORATION = 1.0
 Agent.MINIBATCH_SIZE = 32
 Agent.REPLAY_MEMORY_SIZE = 10000
 Agent.REPLAY_START_SIZE = 100
-Agent.TARGET_NETWORK_UPDATE_FREQUENCY = 100
+Agent.TARGET_NETWORK_UPDATE_FREQUENCY = 500
 Agent.UPDATE_FREQUENCY = 4
 Agent.VALIDATION_SET_SIZE = 32 # MINIBATCH_SIZE <= VALIDATION_SET_SIZE <= REPLAY_START_SIZE * AGENT_HISTORY_LENGTH
 
@@ -57,7 +57,7 @@ def main(argv):
 	if arg.evaluating == 0:
 		env = Environment(rng, one_state = False, display_screen = bool(arg.display_screen))
 		agn = Agent(env.get_action_count(), Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH, rng)
-		env.train(agn)
+		env.train(agn, ask_for_more = True)
 		env.evaluate(agn, 10)
 	elif arg.network_file is not None:
 		env = Environment(rng, one_state = False, display_screen = bool(arg.display_screen))

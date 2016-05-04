@@ -8,19 +8,16 @@ from grid_game import GridGame
 class Environment:
 	"""docstring for Environment"""
 
-	STEPS_PER_EPOCH = 10000
-	STEPS_PER_EPISODE = 100
+	EPOCH_COUNT = 1
 	FRAMES_SKIP = 4
-
-	ORIGINAL_HEIGHT = 2
-	ORIGINAL_WIDTH = 2
-	FRAME_HEIGHT = 2
-	FRAME_WIDTH = 2
-
-	MAX_REWARD = 0
-	MAX_NO_OP = 0
-
-	EPOCH_COUNT = 2
+	FRAME_HEIGHT = 84
+	FRAME_WIDTH = 84
+	MAX_NO_OP = 30
+	MAX_REWARD = 1
+	ORIGINAL_HEIGHT = 210
+	ORIGINAL_WIDTH = 160
+	STEPS_PER_EPISODE = 18000
+	STEPS_PER_EPOCH = 50000
 
 	def __init__(self, rng, display_screen = False):
 		self.api = GridGame(Environment.ORIGINAL_HEIGHT, Environment.ORIGINAL_WIDTH, rng)
@@ -73,11 +70,6 @@ class Environment:
 				except Exception, e:
 					more_epoch = 0
 				epoch_count += more_epoch
-		# CHECK NETWORK LOADING
-		# with open('train_last.txt', 'w') as f:
-		# 	params = agent.network.get_params()
-		# 	for param in params:
-		# 		f.write(str(np.round(param, 4).tolist()) + '\n')
 		print "Number of frame seen:", agent.num_train_obs
 
 	def evaluate(self, agent, num_eval_episode = 30, eps = 0.05, obs = None):
@@ -106,13 +98,15 @@ class Environment:
 		while step_count < steps_left and not is_terminal:
 			self._get_screen(obs)
 			action_id, is_random = agent.get_action(obs, eps, evaluating)
+			reward = self._repeat_action(self.minimal_actions[action_id])
 
 			if print_Q:
 				print "Observation = \n", np.int32(obs) - self.api.translate
 				print "Action%s = %d" % (" (random)" if is_random else "", self.minimal_actions[action_id])
+				print "Reward = %d" % (reward)
 				raw_input()
 			
-			reward = self._repeat_action(self.minimal_actions[action_id])
+			
 			if not evaluating and self.max_reward > 0:
 				reward = np.clip(reward, -self.max_reward, self.max_reward)
 			is_terminal = self.api.game_over() or (self.api.lives() < starting_lives) or (step_count + 1 >= steps_left)
@@ -156,10 +150,9 @@ class Environment:
 			os.makedirs(self.network_dir)
 
 		with open(self.log_dir + '/info.txt', 'w') as f:
+			f.write(str(agent.network.network_description + '\n\n'))
 			self._write_info(f, Environment)
-			f.write('\n')
 			self._write_info(f, agent.__class__)
-			f.write('\n')
 			self._write_info(f, agent.network.__class__)
 
 		with open(self.log_dir + '/results.csv', 'w') as f:
@@ -169,14 +162,14 @@ class Environment:
 		print "Updating log files"
 		with open(self.log_dir + '/results.csv', 'a') as f:
 			f.write("%d,%d,%.4f,%.0f,%.4f,%.0f\n" % (epoch, episode, validate_values, \
-				total_train_time, Environment.STEPS_PER_EPOCH * 1.0 / total_train_time, total_validate_time))
+				total_train_time, Environment.STEPS_PER_EPOCH * 1.0 / max(1, total_train_time), total_validate_time))
 
-		with open(self.network_dir + ('/network_params_%03d' % (epoch)) + '.pkl', 'w') as f:
-			cPickle.dump(agent.network, f, -1)
-			cPickle.dump(agent.tnetwork, f, -1)
+		with open(self.network_dir + ('/%03d' % (epoch)) + '.pkl', 'wb') as f:
+			agent.dump(f)
 
 	def _write_info(self, f, c):
 		hyper_params = [attr for attr in dir(c) \
 			if not attr.startswith("__") and not callable(getattr(c, attr))]
 		for param in hyper_params:
 			f.write(str(c.__name__) + '.' + param + ' = ' + str(getattr(c, param)) + '\n')
+		f.write('\n')

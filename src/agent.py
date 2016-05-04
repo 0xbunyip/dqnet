@@ -6,21 +6,17 @@ from network import Network
 class Agent:
 	"""docstring for Agent"""
 
-	REPLAY_MEMORY_SIZE = 1000
-	REPLAY_START_SIZE = 100
-	AGENT_HISTORY_LENGTH = 1
-
-	UPDATE_FREQUENCY = 4
-	TARGET_NETWORK_UPDATE_FREQUENCY = 500
-
-	DISCOUNT_FACTOR = 0.99
-
-	INITIAL_EXPLORATION = 0.2
-	FINAL_EXPLORATION = 0.2
-	FINAL_EXPLORATION_FRAME = 3000
-
+	AGENT_HISTORY_LENGTH = 4
+	DISCOUNT_FACTOR = 0.95
+	FINAL_EXPLORATION = 0.1
+	FINAL_EXPLORATION_FRAME = 1000000
+	INITIAL_EXPLORATION = 1.0
 	MINIBATCH_SIZE = 32
-	VALIDATION_SET_SIZE = 32
+	REPLAY_MEMORY_SIZE = 500000
+	REPLAY_START_SIZE = 50000
+	TARGET_NETWORK_UPDATE_FREQUENCY = 10000
+	UPDATE_FREQUENCY = 4
+	VALIDATION_SET_SIZE = 2048
 
 	def __init__(self, num_action, frame_height, frame_width, rng, load_network_from = None):
 		self.rng = rng
@@ -36,17 +32,10 @@ class Agent:
 
 		if load_network_from is None:
 			self.network = Network(num_action, self.mbsize, Agent.AGENT_HISTORY_LENGTH, frame_height, frame_width, Agent.DISCOUNT_FACTOR, rng)
-			self.tnetwork = Network(num_action, self.mbsize, Agent.AGENT_HISTORY_LENGTH, frame_height, frame_width, Agent.DISCOUNT_FACTOR, rng)
-			self.network.compile_train_function(self.tnetwork)
 		else:
-			with open(load_network_from) as f:
-				self.network = cPickle.load(f)
-				self.tnetwork = cPickle.load(f)
-				# CHECK NETWORK LOADING
-				# with open('eval_last.txt', 'w') as f2:
-				# 	params = self.network.get_params()
-				# 	for param in params:
-				# 		f2.write(str(np.round(param, 4).tolist()) + '\n')
+			with open(load_network_from, 'rb') as f:
+				init_params = cPickle.load(f)
+				self.network = Network(num_action, self.mbsize, Agent.AGENT_HISTORY_LENGTH, frame_height, frame_width, Agent.DISCOUNT_FACTOR, rng, init_params)
 
 	def get_action(self, obs, eps = 0.0, evaluating = False):
 		exp = self.exp_eval if evaluating else self.exp_train
@@ -94,12 +83,15 @@ class Agent:
 			sum_action_values += np.sum(max_action_values)
 		return sum_action_values / self.validate_size
 
+	def dump(self, f):
+		cPickle.dump(self.network.get_params(), f, -1)
+
 	def _train_one_minibatch(self):
 		states, action, reward, terminal = self.exp_train.get_random_minibatch(self.mbsize)
 		if self.num_train_obs % Agent.TARGET_NETWORK_UPDATE_FREQUENCY == 0:
 			# print "\tClone network at obs_count =", self.num_train_obs
 			self._clone_network()
-		loss = self.network.train_one_minibatch(self.tnetwork, states, action, reward, terminal)
+		loss = self.network.train_one_minibatch(states, action, reward, terminal)
 
 	def _clone_network(self):
-		self.tnetwork.set_params(self.network.get_params())
+		self.network.clone_target()

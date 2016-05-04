@@ -8,19 +8,16 @@ from bandit_game import BanditGame
 class Environment:
 	"""docstring for Environment"""
 
-	STEPS_PER_EPOCH = 10000
-	STEPS_PER_EPISODE = 200
+	EPOCH_COUNT = 1
 	FRAMES_SKIP = 4
-
-	ORIGINAL_HEIGHT = 2
-	ORIGINAL_WIDTH = 2
-	FRAME_HEIGHT = 2
-	FRAME_WIDTH = 2
-
-	MAX_REWARD = 0
-	MAX_NO_OP = 0
-
-	EPOCH_COUNT = 2
+	FRAME_HEIGHT = 84
+	FRAME_WIDTH = 84
+	MAX_NO_OP = 30
+	MAX_REWARD = 1
+	ORIGINAL_HEIGHT = 210
+	ORIGINAL_WIDTH = 160
+	STEPS_PER_EPISODE = 18000
+	STEPS_PER_EPOCH = 50000
 
 	def __init__(self, rng, one_state = False, display_screen = False):
 		self.api = BanditGame(Environment.ORIGINAL_HEIGHT, Environment.ORIGINAL_WIDTH, one_state, rng)
@@ -37,11 +34,12 @@ class Environment:
 	def get_action_count(self):
 		return len(self.minimal_actions)
 
-	def train(self, agent):
+	def train(self, agent, ask_for_more = False):
 		self._open_log_files(agent)
 		obs = np.zeros((Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH), dtype = np.uint8)
+		epoch = 0
 		epoch_count = Environment.EPOCH_COUNT
-		for epoch in xrange(epoch_count):
+		while epoch < epoch_count:
 			steps_left = Environment.STEPS_PER_EPOCH
 
 			print "\n============================================"
@@ -63,6 +61,15 @@ class Environment:
 			print "Finished epoch #%d, episode trained = %d, validate values = %.3f, train time = %.0fs, validate time = %.0fs" \
 					% (epoch + 1, episode, avg_validate_values, total_train_time, total_validate_time)
 			self._update_log_files(agent, epoch + 1, episode, avg_validate_values, total_train_time, total_validate_time)
+			epoch += 1
+			if ask_for_more and epoch >= epoch_count:
+				st = raw_input("\n***Enter number of epoch to continue training: ")
+				more_epoch = 0
+				try:
+					more_epoch = int(st)
+				except Exception, e:
+					more_epoch = 0
+				epoch_count += more_epoch
 		print "Number of frame seen:", agent.num_train_obs
 
 	def evaluate(self, agent, num_eval_episode = 30, eps = 0.05, obs = None):
@@ -71,6 +78,7 @@ class Environment:
 			obs = np.zeros((Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH), dtype = np.uint8)
 		sum_reward = 0.0
 		for episode in xrange(num_eval_episode):
+			print "New evaluating episode"
 			_, reward = self._run_episode(agent, Environment.STEPS_PER_EPISODE, obs, eps, evaluating = True, print_Q = self.display_screen)
 			sum_reward += reward
 		print "Average evaluating reward = %.4f" % (sum_reward / num_eval_episode)
@@ -90,13 +98,14 @@ class Environment:
 		while step_count < steps_left and not is_terminal:
 			self._get_screen(obs)
 			action_id, is_random = agent.get_action(obs, eps, evaluating)
+			reward = self._repeat_action(self.minimal_actions[action_id])
 
 			if print_Q:
 				print "Observation = \n", np.int32(obs) - self.api.translate
 				print "Action%s = %d" % (" (random)" if is_random else "", self.minimal_actions[action_id])
+				print "Reward = %d (best = %d)" % (reward, np.max(np.int32(obs) - self.api.translate))
 				raw_input()
-			
-			reward = self._repeat_action(self.minimal_actions[action_id])
+
 			if not evaluating and self.max_reward > 0:
 				reward = np.clip(reward, -self.max_reward, self.max_reward)
 			is_terminal = self.api.game_over() or (self.api.lives() < starting_lives) or (step_count + 1 >= steps_left)
@@ -140,10 +149,9 @@ class Environment:
 			os.makedirs(self.network_dir)
 
 		with open(self.log_dir + '/info.txt', 'w') as f:
+			f.write(str(agent.network.network_description + '\n\n'))
 			self._write_info(f, Environment)
-			f.write('\n')
 			self._write_info(f, agent.__class__)
-			f.write('\n')
 			self._write_info(f, agent.network.__class__)
 
 		with open(self.log_dir + '/results.csv', 'w') as f:
@@ -153,14 +161,14 @@ class Environment:
 		print "Updating log files"
 		with open(self.log_dir + '/results.csv', 'a') as f:
 			f.write("%d,%d,%.4f,%.0f,%.4f,%.0f\n" % (epoch, episode, validate_values, \
-				total_train_time, Environment.STEPS_PER_EPOCH * 1.0 / total_train_time, total_validate_time))
+				total_train_time, Environment.STEPS_PER_EPOCH * 1.0 / max(1, total_train_time), total_validate_time))
 
-		with open(self.network_dir + ('/network_params_%03d' % (epoch)) + '.pkl', 'w') as f:
-			cPickle.dump(agent.network, f, -1)
-			cPickle.dump(agent.tnetwork, f, -1)
+		with open(self.network_dir + ('/%03d' % (epoch)) + '.pkl', 'wb') as f:
+			agent.dump(f)
 
 	def _write_info(self, f, c):
 		hyper_params = [attr for attr in dir(c) \
 			if not attr.startswith("__") and not callable(getattr(c, attr))]
 		for param in hyper_params:
 			f.write(str(c.__name__) + '.' + param + ' = ' + str(getattr(c, param)) + '\n')
+		f.write('\n')

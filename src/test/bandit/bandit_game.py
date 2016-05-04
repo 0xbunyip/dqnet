@@ -3,14 +3,14 @@ import numpy as np
 class BanditGame():
 	"""docstring for GridGame"""
 
-	MAX_MEAN = 7
-	MAX_VAR = 4
+	MAX_MEAN = 4
+	MAX_VAR = 2
 
 	def __init__(self, height, width, one_state, rng):
 		self.one_state = one_state
 		self.rng = rng
 		self.action_set = range(height * width)
-		self.mean = np.random.randint(-BanditGame.MAX_MEAN, BanditGame.MAX_MEAN + 1, size = (height, width))
+		self.mean = rng.randint(-BanditGame.MAX_MEAN, BanditGame.MAX_MEAN + 1, size = (height, width))
 		self.grid = None
 		self.height = height
 		self.width = width
@@ -39,7 +39,7 @@ class BanditGame():
 		
 	def reset_game(self):
 		self.acted = False
-		self._reset_game_grid()
+		self._reset_game_full()
 
 	def _normalize_grid(self):
 		self.grid += self.translate
@@ -50,7 +50,7 @@ class BanditGame():
 		self._normalize_grid()
 
 	def _reset_game_full(self):
-		self.mean = np.random.randint(-BanditGame.MAX_MEAN, BanditGame.MAX_MEAN + 1, size = (height, width))
+		self.mean = self.rng.randint(-BanditGame.MAX_MEAN, BanditGame.MAX_MEAN + 1, size = (self.height, self.width))
 		self._reset_game_grid()
 
 	def game_over(self):

@@ -2,25 +2,21 @@ import numpy as np
 import cv2
 import time
 import os
-import cPickle
 from ale_python_interface import ALEInterface
 
 class Environment:
 	"""docstring for Environment"""
 
-	STEPS_PER_EPOCH = 2000
-	STEPS_PER_EPISODE = 200
+	EPOCH_COUNT = 1
 	FRAMES_SKIP = 4
-
+	FRAME_HEIGHT = 84
+	FRAME_WIDTH = 84
+	MAX_NO_OP = 30
+	MAX_REWARD = 1
 	ORIGINAL_HEIGHT = 210
 	ORIGINAL_WIDTH = 160
-	FRAME_HEIGHT = 8
-	FRAME_WIDTH = 8
-
-	MAX_REWARD = 0
-	MAX_NO_OP = 30
-
-	EPOCH_COUNT = 2
+	STEPS_PER_EPISODE = 18000
+	STEPS_PER_EPOCH = 50000
 
 	def __init__(self, rom_name, rng, display_screen = False):
 		self.api = ALEInterface()
@@ -138,10 +134,9 @@ class Environment:
 			os.makedirs(self.network_dir)
 
 		with open(self.log_dir + '/info.txt', 'w') as f:
+			f.write(str(agent.network.network_description + '\n\n'))
 			self._write_info(f, Environment)
-			f.write('\n')
 			self._write_info(f, agent.__class__)
-			f.write('\n')
 			self._write_info(f, agent.network.__class__)
 
 		with open(self.log_dir + '/results.csv', 'w') as f:
@@ -151,14 +146,14 @@ class Environment:
 		print "Updating log files"
 		with open(self.log_dir + '/results.csv', 'a') as f:
 			f.write("%d,%d,%.4f,%.0f,%.4f,%.0f\n" % (epoch, episode, validate_values, \
-				total_train_time, Environment.STEPS_PER_EPOCH * 1.0 / total_train_time, total_validate_time))
+				total_train_time, Environment.STEPS_PER_EPOCH * 1.0 / max(1, total_train_time), total_validate_time))
 
-		# with open(self.network_dir + ('/network_params_%03d' % (epoch)) + '.pkl', 'w') as f:
-		# 	cPickle.dump(agent.network, f, -1)
-		# 	cPickle.dump(agent.tnetwork, f, -1)
+		with open(self.network_dir + ('/%03d' % (epoch)) + '.pkl', 'wb') as f:
+			agent.dump(f)
 
 	def _write_info(self, f, c):
 		hyper_params = [attr for attr in dir(c) \
 			if not attr.startswith("__") and not callable(getattr(c, attr))]
 		for param in hyper_params:
 			f.write(str(c.__name__) + '.' + param + ' = ' + str(getattr(c, param)) + '\n')
+		f.write('\n')

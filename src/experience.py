@@ -59,7 +59,8 @@ class Experience:
 			
 			states[cnt : cnt + num_ok, ...] = self.obs.take(ids.ravel(), axis = 0, mode = 'wrap')\
 							.reshape(num_ok, self.frames_per_state + 1, self.height, self.width)
-			tmp = self.action.take(end_id[not_terminal] - 1, mode = 'wrap')
+
+			not_terminal = np.array(not_terminal)
 			action[cnt : cnt + num_ok] = self.action.take(end_id[not_terminal] - 1, mode = 'wrap').reshape(-1, 1)
 			reward[cnt : cnt + num_ok] = self.reward.take(end_id[not_terminal] - 1, mode = 'wrap').reshape(-1, 1)
 			terminal[cnt : cnt + num_ok] = self.terminal.take(end_id[not_terminal] - 1, mode = 'wrap').reshape(-1, 1)
