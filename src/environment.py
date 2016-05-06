@@ -50,9 +50,9 @@ class Environment:
 			while steps_left > 0:
 				num_step, _ = self._run_episode(agent, steps_left, obs)
 				steps_left -= num_step
+				episode += 1
 				if steps_left == 0 or episode % 100 == 0:
 					print "Finished episode #%d, steps_left = %d" % (episode, steps_left)
-				episode += 1
 			epoch_end = time.time()
 			avg_validate_values = agent.get_validate_values()
 			validate_end = time.time()
@@ -69,10 +69,14 @@ class Environment:
 		if obs is None:
 			obs = np.zeros((Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH), dtype = np.uint8)
 		sum_reward = 0.0
+		sum_step = 0.0
 		for episode in xrange(num_eval_episode):
-			_, reward = self._run_episode(agent, Environment.STEPS_PER_EPISODE, obs, eps, evaluating = True)
+			step, reward = self._run_episode(agent, Environment.STEPS_PER_EPISODE, obs, eps, evaluating = True)
 			sum_reward += reward
-		print "Average evaluating reward = %.4f" % (sum_reward / num_eval_episode)
+			sum_step += step
+			print "Finished episode %d, reward = %d, step = %d" % (episode + 1, reward, step)
+		print "Average reward per episode = %.4f" % (sum_reward / num_eval_episode)
+		print "Average step per episode = %.4f" % (sum_step / num_eval_episode)
 		return sum_reward / num_eval_episode
 
 	def _run_episode(self, agent, steps_left, obs, eps = 0.0, evaluating = False):
@@ -81,6 +85,8 @@ class Environment:
 		step_count = 0
 		sum_reward = 0
 
+		self._get_screen(obs) # Get screen to fill the buffer
+		
 		if evaluating and Environment.MAX_NO_OP > 0:
 			for _ in xrange(self.rng.randint(Environment.MAX_NO_OP) + 1):
 				self.api.act(0)
@@ -95,9 +101,9 @@ class Environment:
 				reward = np.clip(reward, -self.max_reward, self.max_reward)
 			is_terminal = self.api.game_over() or (self.api.lives() < starting_lives) or (step_count + 1 >= steps_left)
 			agent.add_experience(obs, is_terminal, action_id, reward, evaluating)
-
 			sum_reward += reward
 			step_count += 1
+			
 		return step_count, sum_reward
 
 	def _repeat_action(self, action):

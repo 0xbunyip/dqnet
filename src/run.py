@@ -8,16 +8,16 @@ import argparse
 import sys
 
 ############### Hyper-parameters ###############
-Environment.EPOCH_COUNT = 200
+Environment.EPOCH_COUNT = 0
 Environment.FRAMES_SKIP = 4
-Environment.FRAME_HEIGHT = 84
-Environment.FRAME_WIDTH = 84
+Environment.FRAME_HEIGHT = 8
+Environment.FRAME_WIDTH = 8
 Environment.MAX_NO_OP = 30
 Environment.MAX_REWARD = 1
 Environment.ORIGINAL_HEIGHT = 210
 Environment.ORIGINAL_WIDTH = 160
 Environment.STEPS_PER_EPISODE = 18000
-Environment.STEPS_PER_EPOCH = 500
+Environment.STEPS_PER_EPOCH = 50000
 
 Agent.AGENT_HISTORY_LENGTH = 4
 Agent.DISCOUNT_FACTOR = 0.95
@@ -47,6 +47,9 @@ def get_arguments(argv):
 		, help = 'Enable evaluating process (default: %(default)s)')
 	parser.add_argument('-d', '--display-screen', dest = 'display_screen', default = 0, type = int
 		, help = 'Display screen while evaluating')
+	parser.add_argument('-t', '--network-type', dest = 'network_type', default = 'nips', type = str
+		, choices=['nature', 'nips', 'simple', 'bandit', 'grid', 'linear']
+		, help = 'Type of network to use as function approximation')
 	parser.add_argument('-f', '--file-network', dest = 'network_file', default = None
 		, help = 'Network file to load from')
 	return parser.parse_args(argv)
@@ -57,12 +60,14 @@ def main(argv):
 
 	if not arg.evaluating:
 		env = Environment(arg.rom_name, rng, display_screen = bool(arg.display_screen))
-		agn = Agent(env.get_action_count(), Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH, rng)
+		agn = Agent(env.get_action_count(), Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH
+			, rng, arg.network_type)
 		env.train(agn)
-		env.evaluate(agn)
+		# env.evaluate(agn)
 	elif arg.network_file is not None:
 		env = Environment(arg.rom_name, rng, display_screen = bool(arg.display_screen))
-		agn = Agent(env.get_action_count(), Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH, rng, arg.network_file)
+		agn = Agent(env.get_action_count(), Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH
+			, rng, arg.network_type, arg.network_file)
 		env.evaluate(agn)
 
 if __name__ == '__main__':

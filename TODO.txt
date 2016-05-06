@@ -1,5 +1,6 @@
 TODO:
-- Choose network type from run file or from runtime arguments
+- Gradient checking
+- Test Q-learning on deterministic game
 - Test speed on GPU
 - Check CPU-GPU memory roundtrip
 - Clean up code, shorten params' names
@@ -8,6 +9,9 @@ TODO:
 - Test Double Q-learning
 
 DONE:
+- Scale pixel's value on GPU
+- Fix get first screen of each episode
+- Choose network type from run file or from runtime arguments
 - Fix RNG bug in test games
 - Add network description to info file
 - Join network and target_network in 1 class

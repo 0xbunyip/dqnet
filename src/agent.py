@@ -18,12 +18,13 @@ class Agent:
 	UPDATE_FREQUENCY = 4
 	VALIDATION_SET_SIZE = 2048
 
-	def __init__(self, num_action, frame_height, frame_width, rng, load_network_from = None):
+	def __init__(self, num_action, frame_height, frame_width, rng, network_type, load_network_from = None):
 		self.rng = rng
 		self.num_action = num_action
 		self.mbsize = Agent.MINIBATCH_SIZE
 		self.validate_size = Agent.VALIDATION_SET_SIZE
 		self.num_train_obs = 0
+		self.network_type = network_type
 		self.eps_decay_rate = (Agent.FINAL_EXPLORATION - Agent.INITIAL_EXPLORATION) / Agent.FINAL_EXPLORATION_FRAME
 
 		self.validate_states = None
@@ -31,11 +32,13 @@ class Agent:
 		self.exp_eval = Experience(Agent.AGENT_HISTORY_LENGTH, frame_height, frame_width, Agent.AGENT_HISTORY_LENGTH, rng)
 
 		if load_network_from is None:
-			self.network = Network(num_action, self.mbsize, Agent.AGENT_HISTORY_LENGTH, frame_height, frame_width, Agent.DISCOUNT_FACTOR, rng)
+			self.network = Network(num_action, self.mbsize, Agent.AGENT_HISTORY_LENGTH, 
+				frame_height, frame_width, Agent.DISCOUNT_FACTOR, rng, network_type)
 		else:
 			with open(load_network_from, 'rb') as f:
 				init_params = cPickle.load(f)
-				self.network = Network(num_action, self.mbsize, Agent.AGENT_HISTORY_LENGTH, frame_height, frame_width, Agent.DISCOUNT_FACTOR, rng, init_params)
+				self.network = Network(num_action, self.mbsize, Agent.AGENT_HISTORY_LENGTH, 
+					frame_height, frame_width, Agent.DISCOUNT_FACTOR, rng, network_type, init_params)
 
 	def get_action(self, obs, eps = 0.0, evaluating = False):
 		exp = self.exp_eval if evaluating else self.exp_train
@@ -79,8 +82,7 @@ class Agent:
 		sum_action_values = 0.0
 		for i in xrange(0, self.validate_size, self.mbsize):
 			states_minibatch = self.validate_states[i : min(self.validate_size, i + self.mbsize), ...]
-			max_action_values = self.network.get_max_action_values(states_minibatch)
-			sum_action_values += np.sum(max_action_values)
+			sum_action_values += np.sum(self.network.get_max_action_values(states_minibatch))
 		return sum_action_values / self.validate_size
 
 	def dump(self, f):
