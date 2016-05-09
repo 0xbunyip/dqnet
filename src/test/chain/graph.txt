@@ -1,0 +1,371 @@
+Elemwise{add,no_inplace} [id A] <TensorType(float32, matrix)> ''   
+ |Elemwise{mul,no_inplace} [id B] <TensorType(float32, matrix)> ''   
+ | |DimShuffle{x,x} [id C] <TensorType(float32, (True, True))> ''   
+ | | |TensorConstant{0.949999988079} [id D] <TensorType(float32, scalar)>
+ | |<TensorType(float32, matrix)> [id E] <TensorType(float32, matrix)>
+ |Elemwise{mul,no_inplace} [id F] <TensorType(float32, matrix)> ''   
+   |DimShuffle{x,x} [id G] <TensorType(float32, (True, True))> ''   
+   | |Elemwise{sub,no_inplace} [id H] <TensorType(float32, scalar)> ''   
+   |   |TensorConstant{1} [id I] <TensorType(int8, scalar)>
+   |   |TensorConstant{0.949999988079} [id J] <TensorType(float32, scalar)>
+   |dot [id K] <TensorType(float32, matrix)> ''   
+     |DimShuffle{1,0} [id L] <TensorType(float32, matrix)> ''   
+     | |Reshape{2} [id M] <TensorType(float32, matrix)> ''   
+     |   |Elemwise{true_div,no_inplace} [id N] <TensorType(float32, 4D)> ''   
+     |   | |<TensorType(float32, 4D)> [id O] <TensorType(float32, 4D)>
+     |   | |DimShuffle{x,x,x,x} [id P] <TensorType(float32, (True, True, True, True))> ''   
+     |   |   |TensorConstant{1.0} [id Q] <TensorType(float32, scalar)>
+     |   |MakeVector{dtype='int64'} [id R] <TensorType(int64, vector)> ''   
+     |     |Subtensor{int64} [id S] <TensorType(int64, scalar)> ''   
+     |     | |Subtensor{:int64:} [id T] <TensorType(int64, vector)> ''   
+     |     | | |Shape [id U] <TensorType(int64, vector)> ''   
+     |     | | | |Elemwise{true_div,no_inplace} [id N] <TensorType(float32, 4D)> ''   
+     |     | | |Constant{1} [id V] <int64>
+     |     | |Constant{0} [id W] <int64>
+     |     |Elemwise{Cast{int64}} [id X] <TensorType(int64, scalar)> ''   
+     |       |TensorConstant{-1} [id Y] <TensorType(int8, scalar)>
+     |Elemwise{mul} [id Z] <TensorType(float32, matrix)> ''   
+       |Elemwise{second} [id BA] <TensorType(float32, matrix)> ''   
+       | |Elemwise{mul,no_inplace} [id BB] <TensorType(float32, matrix)> ''   
+       | | |dot [id BC] <TensorType(float32, matrix)> ''   
+       | | | |Reshape{2} [id M] <TensorType(float32, matrix)> ''   
+       | | | |W [id BD] <TensorType(float32, matrix)>
+       | | |Elemwise{Cast{float32}} [id BE] <TensorType(float32, matrix)> ''   
+       | |   |Elemwise{eq,no_inplace} [id BF] <TensorType(int8, matrix)> ''   
+       | |     |Reshape{2} [id BG] <TensorType(int64, row)> ''   
+       | |     | |ARange{dtype='int64'} [id BH] <TensorType(int64, vector)> ''   
+       | |     | | |TensorConstant{0} [id BI] <TensorType(int8, scalar)>
+       | |     | | |TensorConstant{2} [id BJ] <TensorType(int8, scalar)>
+       | |     | | |TensorConstant{1} [id I] <TensorType(int8, scalar)>
+       | |     | |TensorConstant{[ 1 -1]} [id BK] <TensorType(int64, vector)>
+       | |     |Reshape{2} [id BL] <TensorType(uint8, col)> ''   
+       | |       |<TensorType(uint8, col)> [id BM] <TensorType(uint8, col)>
+       | |       |TensorConstant{[-1  1]} [id BN] <TensorType(int64, vector)>
+       | |DimShuffle{0,x} [id BO] <TensorType(float32, col)> ''   
+       |   |Reshape{1} [id BP] <TensorType(float32, vector)> ''   
+       |     |DimShuffle{0,x} [id BQ] <TensorType(float32, col)> ''   
+       |     | |Sum{axis=[1], acc_dtype=float64} [id BR] <TensorType(float32, vector)> ''   
+       |     |   |Elemwise{neg} [id BS] <TensorType(float32, col)> ''   
+       |     |     |DimShuffle{0,x} [id BT] <TensorType(float32, col)> ''   
+       |     |       |Sum{axis=[1], acc_dtype=float64} [id BU] <TensorType(float32, vector)> ''   
+       |     |         |Elemwise{mul} [id BV] <TensorType(float32, col)> ''   
+       |     |           |Elemwise{mul} [id BW] <TensorType(float32, col)> ''   
+       |     |           | |DimShuffle{0,x} [id BX] <TensorType(float32, col)> ''   
+       |     |           | | |Sum{axis=[1], acc_dtype=float64} [id BY] <TensorType(float32, vector)> ''   
+       |     |           | |   |Elemwise{mul} [id BZ] <TensorType(float32, col)> ''   
+       |     |           | |     |Elemwise{second} [id CA] <TensorType(float32, col)> ''   
+       |     |           | |     | |Elemwise{mul,no_inplace} [id CB] <TensorType(float32, col)> ''   
+       |     |           | |     | | |DimShuffle{x,x} [id CC] <TensorType(float32, (True, True))> ''   
+       |     |           | |     | | | |TensorConstant{0.5} [id CD] <TensorType(float32, scalar)>
+       |     |           | |     | | |Elemwise{pow,no_inplace} [id CE] <TensorType(float32, col)> ''   
+       |     |           | |     | |   |Elemwise{sub,no_inplace} [id CF] <TensorType(float32, col)> ''   
+       |     |           | |     | |   | |DisconnectedGrad [id CG] <TensorType(float32, col)> ''   
+       |     |           | |     | |   | | |Elemwise{add,no_inplace} [id CH] <TensorType(float32, col)> ''   
+       |     |           | |     | |   | |   |<TensorType(float32, col)> [id CI] <TensorType(float32, col)>
+       |     |           | |     | |   | |   |Elemwise{mul,no_inplace} [id CJ] <TensorType(float32, col)> ''   
+       |     |           | |     | |   | |     |Elemwise{mul,no_inplace} [id CK] <TensorType(float32, col)> ''   
+       |     |           | |     | |   | |     | |DimShuffle{x,x} [id CL] <TensorType(float32, (True, True))> ''   
+       |     |           | |     | |   | |     | | |TensorConstant{0.5} [id CM] <TensorType(float32, scalar)>
+       |     |           | |     | |   | |     | |Elemwise{sub,no_inplace} [id CN] <TensorType(float32, col)> ''   
+       |     |           | |     | |   | |     |   |Elemwise{second,no_inplace} [id CO] <TensorType(float32, col)> ''   
+       |     |           | |     | |   | |     |   | |Elemwise{Cast{float32}} [id CP] <TensorType(float32, col)> ''   
+       |     |           | |     | |   | |     |   | | |<TensorType(int8, col)> [id CQ] <TensorType(int8, col)>
+       |     |           | |     | |   | |     |   | |DimShuffle{x,x} [id CR] <TensorType(float32, (True, True))> ''   
+       |     |           | |     | |   | |     |   |   |TensorConstant{1.0} [id Q] <TensorType(float32, scalar)>
+       |     |           | |     | |   | |     |   |Elemwise{Cast{float32}} [id CP] <TensorType(float32, col)> ''   
+       |     |           | |     | |   | |     |DimShuffle{0,x} [id CS] <TensorType(float32, col)> ''   
+       |     |           | |     | |   | |       |MaxAndArgmax.0 [id CT] <TensorType(float32, vector)> 'max'   
+       |     |           | |     | |   | |         |dot [id CU] <TensorType(float32, matrix)> ''   
+       |     |           | |     | |   | |         | |Reshape{2} [id CV] <TensorType(float32, matrix)> ''   
+       |     |           | |     | |   | |         | | |<TensorType(float32, 4D)> [id CW] <TensorType(float32, 4D)>
+       |     |           | |     | |   | |         | | |MakeVector{dtype='int64'} [id CX] <TensorType(int64, vector)> ''   
+       |     |           | |     | |   | |         | |   |Subtensor{int64} [id CY] <TensorType(int64, scalar)> ''   
+       |     |           | |     | |   | |         | |   | |Subtensor{:int64:} [id CZ] <TensorType(int64, vector)> ''   
+       |     |           | |     | |   | |         | |   | | |Shape [id DA] <TensorType(int64, vector)> ''   
+       |     |           | |     | |   | |         | |   | | | |<TensorType(float32, 4D)> [id CW] <TensorType(float32, 4D)>
+       |     |           | |     | |   | |         | |   | | |Constant{1} [id DB] <int64>
+       |     |           | |     | |   | |         | |   | |Constant{0} [id DC] <int64>
+       |     |           | |     | |   | |         | |   |Elemwise{Cast{int64}} [id DD] <TensorType(int64, scalar)> ''   
+       |     |           | |     | |   | |         | |     |TensorConstant{-1} [id Y] <TensorType(int8, scalar)>
+       |     |           | |     | |   | |         | |W [id BD] <TensorType(float32, matrix)>
+       |     |           | |     | |   | |         |TensorConstant{(1,) of 1} [id DE] <TensorType(int64, (True,))>
+       |     |           | |     | |   | |Reshape{2} [id DF] <TensorType(float32, col)> ''   
+       |     |           | |     | |   |   |Sum{axis=[1], acc_dtype=float64} [id DG] <TensorType(float32, vector)> ''   
+       |     |           | |     | |   |   | |Elemwise{mul,no_inplace} [id BB] <TensorType(float32, matrix)> ''   
+       |     |           | |     | |   |   |TensorConstant{[-1  1]} [id DH] <TensorType(int64, vector)>
+       |     |           | |     | |   |DimShuffle{x,x} [id DI] <TensorType(int8, (True, True))> ''   
+       |     |           | |     | |     |TensorConstant{2} [id BJ] <TensorType(int8, scalar)>
+       |     |           | |     | |DimShuffle{x,x} [id DJ] <TensorType(float32, (True, True))> ''   
+       |     |           | |     |   |Elemwise{second,no_inplace} [id DK] <TensorType(float32, scalar)> ''   
+       |     |           | |     |     |Sum{acc_dtype=float64} [id DL] <TensorType(float32, scalar)> ''   
+       |     |           | |     |     | |Elemwise{mul,no_inplace} [id CB] <TensorType(float32, col)> ''   
+       |     |           | |     |     |TensorConstant{1.0} [id Q] <TensorType(float32, scalar)>
+       |     |           | |     |DimShuffle{x,x} [id CC] <TensorType(float32, (True, True))> ''   
+       |     |           | |DimShuffle{x,x} [id DI] <TensorType(int8, (True, True))> ''   
+       |     |           |Elemwise{pow} [id DM] <TensorType(float32, col)> ''   
+       |     |             |Elemwise{sub,no_inplace} [id CF] <TensorType(float32, col)> ''   
+       |     |             |Elemwise{sub} [id DN] <TensorType(int8, (True, True))> ''   
+       |     |               |DimShuffle{x,x} [id DI] <TensorType(int8, (True, True))> ''   
+       |     |               |DimShuffle{x,x} [id DO] <TensorType(int8, (True, True))> ''   
+       |     |                 |TensorConstant{1} [id I] <TensorType(int8, scalar)>
+       |     |Shape [id DP] <TensorType(int64, vector)> ''   
+       |       |Sum{axis=[1], acc_dtype=float64} [id DG] <TensorType(float32, vector)> ''   
+       |Elemwise{Cast{float32}} [id BE] <TensorType(float32, matrix)> ''   
+Elemwise{add,no_inplace} [id A] <TensorType(float32, matrix)> ''   
+ |Elemwise{mul,no_inplace} [id B] <TensorType(float32, matrix)> ''   
+ | |DimShuffle{x,x} [id C] <TensorType(float32, (True, True))> ''   
+ | | |TensorConstant{0.949999988079} [id D] <TensorType(float32, scalar)>
+ | |<TensorType(float32, matrix)> [id E] <TensorType(float32, matrix)>
+ |Elemwise{mul,no_inplace} [id F] <TensorType(float32, matrix)> ''   
+   |DimShuffle{x,x} [id G] <TensorType(float32, (True, True))> ''   
+   | |Elemwise{sub,no_inplace} [id H] <TensorType(float32, scalar)> ''   
+   |   |TensorConstant{1} [id I] <TensorType(int8, scalar)>
+   |   |TensorConstant{0.949999988079} [id J] <TensorType(float32, scalar)>
+   |Elemwise{pow,no_inplace} [id K] <TensorType(float32, matrix)> ''   
+     |dot [id L] <TensorType(float32, matrix)> ''   
+     | |DimShuffle{1,0} [id M] <TensorType(float32, matrix)> ''   
+     | | |Reshape{2} [id N] <TensorType(float32, matrix)> ''   
+     | |   |Elemwise{true_div,no_inplace} [id O] <TensorType(float32, 4D)> ''   
+     | |   | |<TensorType(float32, 4D)> [id P] <TensorType(float32, 4D)>
+     | |   | |DimShuffle{x,x,x,x} [id Q] <TensorType(float32, (True, True, True, True))> ''   
+     | |   |   |TensorConstant{1.0} [id R] <TensorType(float32, scalar)>
+     | |   |MakeVector{dtype='int64'} [id S] <TensorType(int64, vector)> ''   
+     | |     |Subtensor{int64} [id T] <TensorType(int64, scalar)> ''   
+     | |     | |Subtensor{:int64:} [id U] <TensorType(int64, vector)> ''   
+     | |     | | |Shape [id V] <TensorType(int64, vector)> ''   
+     | |     | | | |Elemwise{true_div,no_inplace} [id O] <TensorType(float32, 4D)> ''   
+     | |     | | |Constant{1} [id W] <int64>
+     | |     | |Constant{0} [id X] <int64>
+     | |     |Elemwise{Cast{int64}} [id Y] <TensorType(int64, scalar)> ''   
+     | |       |TensorConstant{-1} [id Z] <TensorType(int8, scalar)>
+     | |Elemwise{mul} [id BA] <TensorType(float32, matrix)> ''   
+     |   |Elemwise{second} [id BB] <TensorType(float32, matrix)> ''   
+     |   | |Elemwise{mul,no_inplace} [id BC] <TensorType(float32, matrix)> ''   
+     |   | | |dot [id BD] <TensorType(float32, matrix)> ''   
+     |   | | | |Reshape{2} [id N] <TensorType(float32, matrix)> ''   
+     |   | | | |W [id BE] <TensorType(float32, matrix)>
+     |   | | |Elemwise{Cast{float32}} [id BF] <TensorType(float32, matrix)> ''   
+     |   | |   |Elemwise{eq,no_inplace} [id BG] <TensorType(int8, matrix)> ''   
+     |   | |     |Reshape{2} [id BH] <TensorType(int64, row)> ''   
+     |   | |     | |ARange{dtype='int64'} [id BI] <TensorType(int64, vector)> ''   
+     |   | |     | | |TensorConstant{0} [id BJ] <TensorType(int8, scalar)>
+     |   | |     | | |TensorConstant{2} [id BK] <TensorType(int8, scalar)>
+     |   | |     | | |TensorConstant{1} [id I] <TensorType(int8, scalar)>
+     |   | |     | |TensorConstant{[ 1 -1]} [id BL] <TensorType(int64, vector)>
+     |   | |     |Reshape{2} [id BM] <TensorType(uint8, col)> ''   
+     |   | |       |<TensorType(uint8, col)> [id BN] <TensorType(uint8, col)>
+     |   | |       |TensorConstant{[-1  1]} [id BO] <TensorType(int64, vector)>
+     |   | |DimShuffle{0,x} [id BP] <TensorType(float32, col)> ''   
+     |   |   |Reshape{1} [id BQ] <TensorType(float32, vector)> ''   
+     |   |     |DimShuffle{0,x} [id BR] <TensorType(float32, col)> ''   
+     |   |     | |Sum{axis=[1], acc_dtype=float64} [id BS] <TensorType(float32, vector)> ''   
+     |   |     |   |Elemwise{neg} [id BT] <TensorType(float32, col)> ''   
+     |   |     |     |DimShuffle{0,x} [id BU] <TensorType(float32, col)> ''   
+     |   |     |       |Sum{axis=[1], acc_dtype=float64} [id BV] <TensorType(float32, vector)> ''   
+     |   |     |         |Elemwise{mul} [id BW] <TensorType(float32, col)> ''   
+     |   |     |           |Elemwise{mul} [id BX] <TensorType(float32, col)> ''   
+     |   |     |           | |DimShuffle{0,x} [id BY] <TensorType(float32, col)> ''   
+     |   |     |           | | |Sum{axis=[1], acc_dtype=float64} [id BZ] <TensorType(float32, vector)> ''   
+     |   |     |           | |   |Elemwise{mul} [id CA] <TensorType(float32, col)> ''   
+     |   |     |           | |     |Elemwise{second} [id CB] <TensorType(float32, col)> ''   
+     |   |     |           | |     | |Elemwise{mul,no_inplace} [id CC] <TensorType(float32, col)> ''   
+     |   |     |           | |     | | |DimShuffle{x,x} [id CD] <TensorType(float32, (True, True))> ''   
+     |   |     |           | |     | | | |TensorConstant{0.5} [id CE] <TensorType(float32, scalar)>
+     |   |     |           | |     | | |Elemwise{pow,no_inplace} [id CF] <TensorType(float32, col)> ''   
+     |   |     |           | |     | |   |Elemwise{sub,no_inplace} [id CG] <TensorType(float32, col)> ''   
+     |   |     |           | |     | |   | |DisconnectedGrad [id CH] <TensorType(float32, col)> ''   
+     |   |     |           | |     | |   | | |Elemwise{add,no_inplace} [id CI] <TensorType(float32, col)> ''   
+     |   |     |           | |     | |   | |   |<TensorType(float32, col)> [id CJ] <TensorType(float32, col)>
+     |   |     |           | |     | |   | |   |Elemwise{mul,no_inplace} [id CK] <TensorType(float32, col)> ''   
+     |   |     |           | |     | |   | |     |Elemwise{mul,no_inplace} [id CL] <TensorType(float32, col)> ''   
+     |   |     |           | |     | |   | |     | |DimShuffle{x,x} [id CM] <TensorType(float32, (True, True))> ''   
+     |   |     |           | |     | |   | |     | | |TensorConstant{0.5} [id CN] <TensorType(float32, scalar)>
+     |   |     |           | |     | |   | |     | |Elemwise{sub,no_inplace} [id CO] <TensorType(float32, col)> ''   
+     |   |     |           | |     | |   | |     |   |Elemwise{second,no_inplace} [id CP] <TensorType(float32, col)> ''   
+     |   |     |           | |     | |   | |     |   | |Elemwise{Cast{float32}} [id CQ] <TensorType(float32, col)> ''   
+     |   |     |           | |     | |   | |     |   | | |<TensorType(int8, col)> [id CR] <TensorType(int8, col)>
+     |   |     |           | |     | |   | |     |   | |DimShuffle{x,x} [id CS] <TensorType(float32, (True, True))> ''   
+     |   |     |           | |     | |   | |     |   |   |TensorConstant{1.0} [id R] <TensorType(float32, scalar)>
+     |   |     |           | |     | |   | |     |   |Elemwise{Cast{float32}} [id CQ] <TensorType(float32, col)> ''   
+     |   |     |           | |     | |   | |     |DimShuffle{0,x} [id CT] <TensorType(float32, col)> ''   
+     |   |     |           | |     | |   | |       |MaxAndArgmax.0 [id CU] <TensorType(float32, vector)> 'max'   
+     |   |     |           | |     | |   | |         |dot [id CV] <TensorType(float32, matrix)> ''   
+     |   |     |           | |     | |   | |         | |Reshape{2} [id CW] <TensorType(float32, matrix)> ''   
+     |   |     |           | |     | |   | |         | | |<TensorType(float32, 4D)> [id CX] <TensorType(float32, 4D)>
+     |   |     |           | |     | |   | |         | | |MakeVector{dtype='int64'} [id CY] <TensorType(int64, vector)> ''   
+     |   |     |           | |     | |   | |         | |   |Subtensor{int64} [id CZ] <TensorType(int64, scalar)> ''   
+     |   |     |           | |     | |   | |         | |   | |Subtensor{:int64:} [id DA] <TensorType(int64, vector)> ''   
+     |   |     |           | |     | |   | |         | |   | | |Shape [id DB] <TensorType(int64, vector)> ''   
+     |   |     |           | |     | |   | |         | |   | | | |<TensorType(float32, 4D)> [id CX] <TensorType(float32, 4D)>
+     |   |     |           | |     | |   | |         | |   | | |Constant{1} [id DC] <int64>
+     |   |     |           | |     | |   | |         | |   | |Constant{0} [id DD] <int64>
+     |   |     |           | |     | |   | |         | |   |Elemwise{Cast{int64}} [id DE] <TensorType(int64, scalar)> ''   
+     |   |     |           | |     | |   | |         | |     |TensorConstant{-1} [id Z] <TensorType(int8, scalar)>
+     |   |     |           | |     | |   | |         | |W [id BE] <TensorType(float32, matrix)>
+     |   |     |           | |     | |   | |         |TensorConstant{(1,) of 1} [id DF] <TensorType(int64, (True,))>
+     |   |     |           | |     | |   | |Reshape{2} [id DG] <TensorType(float32, col)> ''   
+     |   |     |           | |     | |   |   |Sum{axis=[1], acc_dtype=float64} [id DH] <TensorType(float32, vector)> ''   
+     |   |     |           | |     | |   |   | |Elemwise{mul,no_inplace} [id BC] <TensorType(float32, matrix)> ''   
+     |   |     |           | |     | |   |   |TensorConstant{[-1  1]} [id DI] <TensorType(int64, vector)>
+     |   |     |           | |     | |   |DimShuffle{x,x} [id DJ] <TensorType(int8, (True, True))> ''   
+     |   |     |           | |     | |     |TensorConstant{2} [id BK] <TensorType(int8, scalar)>
+     |   |     |           | |     | |DimShuffle{x,x} [id DK] <TensorType(float32, (True, True))> ''   
+     |   |     |           | |     |   |Elemwise{second,no_inplace} [id DL] <TensorType(float32, scalar)> ''   
+     |   |     |           | |     |     |Sum{acc_dtype=float64} [id DM] <TensorType(float32, scalar)> ''   
+     |   |     |           | |     |     | |Elemwise{mul,no_inplace} [id CC] <TensorType(float32, col)> ''   
+     |   |     |           | |     |     |TensorConstant{1.0} [id R] <TensorType(float32, scalar)>
+     |   |     |           | |     |DimShuffle{x,x} [id CD] <TensorType(float32, (True, True))> ''   
+     |   |     |           | |DimShuffle{x,x} [id DJ] <TensorType(int8, (True, True))> ''   
+     |   |     |           |Elemwise{pow} [id DN] <TensorType(float32, col)> ''   
+     |   |     |             |Elemwise{sub,no_inplace} [id CG] <TensorType(float32, col)> ''   
+     |   |     |             |Elemwise{sub} [id DO] <TensorType(int8, (True, True))> ''   
+     |   |     |               |DimShuffle{x,x} [id DJ] <TensorType(int8, (True, True))> ''   
+     |   |     |               |DimShuffle{x,x} [id DP] <TensorType(int8, (True, True))> ''   
+     |   |     |                 |TensorConstant{1} [id I] <TensorType(int8, scalar)>
+     |   |     |Shape [id DQ] <TensorType(int64, vector)> ''   
+     |   |       |Sum{axis=[1], acc_dtype=float64} [id DH] <TensorType(float32, vector)> ''   
+     |   |Elemwise{Cast{float32}} [id BF] <TensorType(float32, matrix)> ''   
+     |DimShuffle{x,x} [id DR] <TensorType(int8, (True, True))> ''   
+       |TensorConstant{2} [id BK] <TensorType(int8, scalar)>
+Elemwise{sub,no_inplace} [id A] <TensorType(float32, matrix)> ''   
+ |W [id B] <TensorType(float32, matrix)>
+ |Elemwise{true_div,no_inplace} [id C] <TensorType(float32, matrix)> ''   
+   |Elemwise{mul,no_inplace} [id D] <TensorType(float32, matrix)> ''   
+   | |DimShuffle{x,x} [id E] <TensorType(float32, (True, True))> ''   
+   | | |TensorConstant{1.0} [id F] <TensorType(float32, scalar)>
+   | |dot [id G] <TensorType(float32, matrix)> ''   
+   |   |DimShuffle{1,0} [id H] <TensorType(float32, matrix)> ''   
+   |   | |Reshape{2} [id I] <TensorType(float32, matrix)> ''   
+   |   |   |Elemwise{true_div,no_inplace} [id J] <TensorType(float32, 4D)> ''   
+   |   |   | |<TensorType(float32, 4D)> [id K] <TensorType(float32, 4D)>
+   |   |   | |DimShuffle{x,x,x,x} [id L] <TensorType(float32, (True, True, True, True))> ''   
+   |   |   |   |TensorConstant{1.0} [id F] <TensorType(float32, scalar)>
+   |   |   |MakeVector{dtype='int64'} [id M] <TensorType(int64, vector)> ''   
+   |   |     |Subtensor{int64} [id N] <TensorType(int64, scalar)> ''   
+   |   |     | |Subtensor{:int64:} [id O] <TensorType(int64, vector)> ''   
+   |   |     | | |Shape [id P] <TensorType(int64, vector)> ''   
+   |   |     | | | |Elemwise{true_div,no_inplace} [id J] <TensorType(float32, 4D)> ''   
+   |   |     | | |Constant{1} [id Q] <int64>
+   |   |     | |Constant{0} [id R] <int64>
+   |   |     |Elemwise{Cast{int64}} [id S] <TensorType(int64, scalar)> ''   
+   |   |       |TensorConstant{-1} [id T] <TensorType(int8, scalar)>
+   |   |Elemwise{mul} [id U] <TensorType(float32, matrix)> ''   
+   |     |Elemwise{second} [id V] <TensorType(float32, matrix)> ''   
+   |     | |Elemwise{mul,no_inplace} [id W] <TensorType(float32, matrix)> ''   
+   |     | | |dot [id X] <TensorType(float32, matrix)> ''   
+   |     | | | |Reshape{2} [id I] <TensorType(float32, matrix)> ''   
+   |     | | | |W [id B] <TensorType(float32, matrix)>
+   |     | | |Elemwise{Cast{float32}} [id Y] <TensorType(float32, matrix)> ''   
+   |     | |   |Elemwise{eq,no_inplace} [id Z] <TensorType(int8, matrix)> ''   
+   |     | |     |Reshape{2} [id BA] <TensorType(int64, row)> ''   
+   |     | |     | |ARange{dtype='int64'} [id BB] <TensorType(int64, vector)> ''   
+   |     | |     | | |TensorConstant{0} [id BC] <TensorType(int8, scalar)>
+   |     | |     | | |TensorConstant{2} [id BD] <TensorType(int8, scalar)>
+   |     | |     | | |TensorConstant{1} [id BE] <TensorType(int8, scalar)>
+   |     | |     | |TensorConstant{[ 1 -1]} [id BF] <TensorType(int64, vector)>
+   |     | |     |Reshape{2} [id BG] <TensorType(uint8, col)> ''   
+   |     | |       |<TensorType(uint8, col)> [id BH] <TensorType(uint8, col)>
+   |     | |       |TensorConstant{[-1  1]} [id BI] <TensorType(int64, vector)>
+   |     | |DimShuffle{0,x} [id BJ] <TensorType(float32, col)> ''   
+   |     |   |Reshape{1} [id BK] <TensorType(float32, vector)> ''   
+   |     |     |DimShuffle{0,x} [id BL] <TensorType(float32, col)> ''   
+   |     |     | |Sum{axis=[1], acc_dtype=float64} [id BM] <TensorType(float32, vector)> ''   
+   |     |     |   |Elemwise{neg} [id BN] <TensorType(float32, col)> ''   
+   |     |     |     |DimShuffle{0,x} [id BO] <TensorType(float32, col)> ''   
+   |     |     |       |Sum{axis=[1], acc_dtype=float64} [id BP] <TensorType(float32, vector)> ''   
+   |     |     |         |Elemwise{mul} [id BQ] <TensorType(float32, col)> ''   
+   |     |     |           |Elemwise{mul} [id BR] <TensorType(float32, col)> ''   
+   |     |     |           | |DimShuffle{0,x} [id BS] <TensorType(float32, col)> ''   
+   |     |     |           | | |Sum{axis=[1], acc_dtype=float64} [id BT] <TensorType(float32, vector)> ''   
+   |     |     |           | |   |Elemwise{mul} [id BU] <TensorType(float32, col)> ''   
+   |     |     |           | |     |Elemwise{second} [id BV] <TensorType(float32, col)> ''   
+   |     |     |           | |     | |Elemwise{mul,no_inplace} [id BW] <TensorType(float32, col)> ''   
+   |     |     |           | |     | | |DimShuffle{x,x} [id BX] <TensorType(float32, (True, True))> ''   
+   |     |     |           | |     | | | |TensorConstant{0.5} [id BY] <TensorType(float32, scalar)>
+   |     |     |           | |     | | |Elemwise{pow,no_inplace} [id BZ] <TensorType(float32, col)> ''   
+   |     |     |           | |     | |   |Elemwise{sub,no_inplace} [id CA] <TensorType(float32, col)> ''   
+   |     |     |           | |     | |   | |DisconnectedGrad [id CB] <TensorType(float32, col)> ''   
+   |     |     |           | |     | |   | | |Elemwise{add,no_inplace} [id CC] <TensorType(float32, col)> ''   
+   |     |     |           | |     | |   | |   |<TensorType(float32, col)> [id CD] <TensorType(float32, col)>
+   |     |     |           | |     | |   | |   |Elemwise{mul,no_inplace} [id CE] <TensorType(float32, col)> ''   
+   |     |     |           | |     | |   | |     |Elemwise{mul,no_inplace} [id CF] <TensorType(float32, col)> ''   
+   |     |     |           | |     | |   | |     | |DimShuffle{x,x} [id CG] <TensorType(float32, (True, True))> ''   
+   |     |     |           | |     | |   | |     | | |TensorConstant{0.5} [id CH] <TensorType(float32, scalar)>
+   |     |     |           | |     | |   | |     | |Elemwise{sub,no_inplace} [id CI] <TensorType(float32, col)> ''   
+   |     |     |           | |     | |   | |     |   |Elemwise{second,no_inplace} [id CJ] <TensorType(float32, col)> ''   
+   |     |     |           | |     | |   | |     |   | |Elemwise{Cast{float32}} [id CK] <TensorType(float32, col)> ''   
+   |     |     |           | |     | |   | |     |   | | |<TensorType(int8, col)> [id CL] <TensorType(int8, col)>
+   |     |     |           | |     | |   | |     |   | |DimShuffle{x,x} [id CM] <TensorType(float32, (True, True))> ''   
+   |     |     |           | |     | |   | |     |   |   |TensorConstant{1.0} [id F] <TensorType(float32, scalar)>
+   |     |     |           | |     | |   | |     |   |Elemwise{Cast{float32}} [id CK] <TensorType(float32, col)> ''   
+   |     |     |           | |     | |   | |     |DimShuffle{0,x} [id CN] <TensorType(float32, col)> ''   
+   |     |     |           | |     | |   | |       |MaxAndArgmax.0 [id CO] <TensorType(float32, vector)> 'max'   
+   |     |     |           | |     | |   | |         |dot [id CP] <TensorType(float32, matrix)> ''   
+   |     |     |           | |     | |   | |         | |Reshape{2} [id CQ] <TensorType(float32, matrix)> ''   
+   |     |     |           | |     | |   | |         | | |<TensorType(float32, 4D)> [id CR] <TensorType(float32, 4D)>
+   |     |     |           | |     | |   | |         | | |MakeVector{dtype='int64'} [id CS] <TensorType(int64, vector)> ''   
+   |     |     |           | |     | |   | |         | |   |Subtensor{int64} [id CT] <TensorType(int64, scalar)> ''   
+   |     |     |           | |     | |   | |         | |   | |Subtensor{:int64:} [id CU] <TensorType(int64, vector)> ''   
+   |     |     |           | |     | |   | |         | |   | | |Shape [id CV] <TensorType(int64, vector)> ''   
+   |     |     |           | |     | |   | |         | |   | | | |<TensorType(float32, 4D)> [id CR] <TensorType(float32, 4D)>
+   |     |     |           | |     | |   | |         | |   | | |Constant{1} [id CW] <int64>
+   |     |     |           | |     | |   | |         | |   | |Constant{0} [id CX] <int64>
+   |     |     |           | |     | |   | |         | |   |Elemwise{Cast{int64}} [id CY] <TensorType(int64, scalar)> ''   
+   |     |     |           | |     | |   | |         | |     |TensorConstant{-1} [id T] <TensorType(int8, scalar)>
+   |     |     |           | |     | |   | |         | |W [id B] <TensorType(float32, matrix)>
+   |     |     |           | |     | |   | |         |TensorConstant{(1,) of 1} [id CZ] <TensorType(int64, (True,))>
+   |     |     |           | |     | |   | |Reshape{2} [id DA] <TensorType(float32, col)> ''   
+   |     |     |           | |     | |   |   |Sum{axis=[1], acc_dtype=float64} [id DB] <TensorType(float32, vector)> ''   
+   |     |     |           | |     | |   |   | |Elemwise{mul,no_inplace} [id W] <TensorType(float32, matrix)> ''   
+   |     |     |           | |     | |   |   |TensorConstant{[-1  1]} [id DC] <TensorType(int64, vector)>
+   |     |     |           | |     | |   |DimShuffle{x,x} [id DD] <TensorType(int8, (True, True))> ''   
+   |     |     |           | |     | |     |TensorConstant{2} [id BD] <TensorType(int8, scalar)>
+   |     |     |           | |     | |DimShuffle{x,x} [id DE] <TensorType(float32, (True, True))> ''   
+   |     |     |           | |     |   |Elemwise{second,no_inplace} [id DF] <TensorType(float32, scalar)> ''   
+   |     |     |           | |     |     |Sum{acc_dtype=float64} [id DG] <TensorType(float32, scalar)> ''   
+   |     |     |           | |     |     | |Elemwise{mul,no_inplace} [id BW] <TensorType(float32, col)> ''   
+   |     |     |           | |     |     |TensorConstant{1.0} [id F] <TensorType(float32, scalar)>
+   |     |     |           | |     |DimShuffle{x,x} [id BX] <TensorType(float32, (True, True))> ''   
+   |     |     |           | |DimShuffle{x,x} [id DD] <TensorType(int8, (True, True))> ''   
+   |     |     |           |Elemwise{pow} [id DH] <TensorType(float32, col)> ''   
+   |     |     |             |Elemwise{sub,no_inplace} [id CA] <TensorType(float32, col)> ''   
+   |     |     |             |Elemwise{sub} [id DI] <TensorType(int8, (True, True))> ''   
+   |     |     |               |DimShuffle{x,x} [id DD] <TensorType(int8, (True, True))> ''   
+   |     |     |               |DimShuffle{x,x} [id DJ] <TensorType(int8, (True, True))> ''   
+   |     |     |                 |TensorConstant{1} [id BE] <TensorType(int8, scalar)>
+   |     |     |Shape [id DK] <TensorType(int64, vector)> ''   
+   |     |       |Sum{axis=[1], acc_dtype=float64} [id DB] <TensorType(float32, vector)> ''   
+   |     |Elemwise{Cast{float32}} [id Y] <TensorType(float32, matrix)> ''   
+   |Elemwise{sqrt,no_inplace} [id DL] <TensorType(float32, matrix)> ''   
+     |Elemwise{add,no_inplace} [id DM] <TensorType(float32, matrix)> ''   
+       |Elemwise{sub,no_inplace} [id DN] <TensorType(float32, matrix)> ''   
+       | |Elemwise{add,no_inplace} [id DO] <TensorType(float32, matrix)> ''   
+       | | |Elemwise{mul,no_inplace} [id DP] <TensorType(float32, matrix)> ''   
+       | | | |DimShuffle{x,x} [id DQ] <TensorType(float32, (True, True))> ''   
+       | | | | |TensorConstant{0.949999988079} [id DR] <TensorType(float32, scalar)>
+       | | | |<TensorType(float32, matrix)> [id DS] <TensorType(float32, matrix)>
+       | | |Elemwise{mul,no_inplace} [id DT] <TensorType(float32, matrix)> ''   
+       | |   |DimShuffle{x,x} [id DU] <TensorType(float32, (True, True))> ''   
+       | |   | |Elemwise{sub,no_inplace} [id DV] <TensorType(float32, scalar)> ''   
+       | |   |   |TensorConstant{1} [id BE] <TensorType(int8, scalar)>
+       | |   |   |TensorConstant{0.949999988079} [id DW] <TensorType(float32, scalar)>
+       | |   |Elemwise{pow,no_inplace} [id DX] <TensorType(float32, matrix)> ''   
+       | |     |dot [id G] <TensorType(float32, matrix)> ''   
+       | |     |DimShuffle{x,x} [id DY] <TensorType(int8, (True, True))> ''   
+       | |       |TensorConstant{2} [id BD] <TensorType(int8, scalar)>
+       | |Elemwise{pow,no_inplace} [id DZ] <TensorType(float32, matrix)> ''   
+       |   |Elemwise{add,no_inplace} [id EA] <TensorType(float32, matrix)> ''   
+       |   | |Elemwise{mul,no_inplace} [id EB] <TensorType(float32, matrix)> ''   
+       |   | | |DimShuffle{x,x} [id EC] <TensorType(float32, (True, True))> ''   
+       |   | | | |TensorConstant{0.949999988079} [id ED] <TensorType(float32, scalar)>
+       |   | | |<TensorType(float32, matrix)> [id EE] <TensorType(float32, matrix)>
+       |   | |Elemwise{mul,no_inplace} [id EF] <TensorType(float32, matrix)> ''   
+       |   |   |DimShuffle{x,x} [id EG] <TensorType(float32, (True, True))> ''   
+       |   |   | |Elemwise{sub,no_inplace} [id EH] <TensorType(float32, scalar)> ''   
+       |   |   |   |TensorConstant{1} [id BE] <TensorType(int8, scalar)>
+       |   |   |   |TensorConstant{0.949999988079} [id EI] <TensorType(float32, scalar)>
+       |   |   |dot [id G] <TensorType(float32, matrix)> ''   
+       |   |DimShuffle{x,x} [id EJ] <TensorType(int8, (True, True))> ''   
+       |     |TensorConstant{2} [id BD] <TensorType(int8, scalar)>
+       |DimShuffle{x,x} [id EK] <TensorType(float32, (True, True))> ''   
+         |TensorConstant{1.0} [id F] <TensorType(float32, scalar)>

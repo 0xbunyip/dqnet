@@ -27,8 +27,7 @@ Agent.FINAL_EXPLORATION_FRAME = 50000
 Agent.INITIAL_EXPLORATION = 1.0
 Agent.MINIBATCH_SIZE = 32
 Agent.REPLAY_MEMORY_SIZE = 50000
-Agent.REPLAY_START_SIZE = 500
-Agent.TARGET_NETWORK_UPDATE_FREQUENCY = 10000
+Agent.REPLAY_START_SIZE = 1000
 Agent.UPDATE_FREQUENCY = 4
 Agent.VALIDATION_SET_SIZE = 256 # MINIBATCH_SIZE <= VALIDATION_SET_SIZE <= REPLAY_START_SIZE * AGENT_HISTORY_LENGTH
 
@@ -38,14 +37,18 @@ Network.MAX_ERROR = 0.0
 Network.MIN_SQR_GRAD = 0.01
 Network.SCALE_FACTOR = 20.0
 Network.SQR_GRAD_MOMENTUM = 0.95
+Network.TARGET_NETWORK_UPDATE_FREQUENCY = 10000
 ################################################
 
 def get_arguments(argv):
 	parser = argparse.ArgumentParser(description = 'Train/Evaluate deep Q-network')
-	parser.add_argument('-e', '--evaluate-only', dest = 'evaluating', default = 0, type = int
+	parser.add_argument('-e', '--evaluate-only', dest = 'evaluating', action = 'store_true'
 		, help = 'Enable evaluating process (default: %(default)s)')
-	parser.add_argument('-d', '--display-screen', dest = 'display_screen', default = 0, type = int
+	parser.add_argument('-d', '--display-screen', dest = 'display_screen', action = 'store_true'
 		, help = 'Display screen while evaluating')
+	parser.add_argument('-t', '--network-type', dest = 'network_type', default = 'grid', type = str
+		, choices=['nature', 'nips', 'simple', 'bandit', 'grid', 'linear']
+		, help = 'Type of network to use as function approximator')
 	parser.add_argument('-f', '--file-network', dest = 'network_file', default = None
 		, help = 'Network file to load from')
 	return parser.parse_args(argv)
@@ -54,14 +57,16 @@ def main(argv):
 	rng = np.random.RandomState(123)
 	arg = get_arguments(argv)
 
-	if arg.evaluating == 0:
+	if not arg.evaluating:
 		env = Environment(rng, display_screen = bool(arg.display_screen))
-		agn = Agent(env.get_action_count(), Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH, rng)
+		agn = Agent(env.get_action_count(), Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH
+			, rng, arg.network_type)
 		env.train(agn, ask_for_more = True)
 		env.evaluate(agn, 10)
 	elif arg.network_file is not None:
 		env = Environment(rng, display_screen = bool(arg.display_screen))
-		agn = Agent(env.get_action_count(), Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH, rng, arg.network_file)
+		agn = Agent(env.get_action_count(), Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH
+			, rng, arg.network_type, arg.network_file)
 		env.evaluate(agn, 10)
 
 if __name__ == '__main__':

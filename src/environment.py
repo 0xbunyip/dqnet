@@ -7,7 +7,7 @@ from ale_python_interface import ALEInterface
 class Environment:
 	"""docstring for Environment"""
 
-	EPOCH_COUNT = 1
+	EPOCH_COUNT = 200
 	FRAMES_SKIP = 4
 	FRAME_HEIGHT = 84
 	FRAME_WIDTH = 84
@@ -43,7 +43,7 @@ class Environment:
 		for epoch in xrange(epoch_count):
 			steps_left = Environment.STEPS_PER_EPOCH
 
-			print "\n============================================"
+			print "\n" + "=" * 50
 			print "Epoch #%d" % (epoch + 1)
 			episode = 0
 			epoch_start = time.time()

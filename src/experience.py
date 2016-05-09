@@ -14,7 +14,7 @@ class Experience:
 		self.frames_per_state = frames_per_state
 		self.obs = np.zeros((replay_mem_size, frame_height, frame_width), dtype = np.uint8)
 		self.action = np.zeros((replay_mem_size, 1), dtype = np.uint8)
-		self.reward = np.zeros((replay_mem_size, 1), dtype = np.int32)
+		self.reward = np.zeros((replay_mem_size, 1), dtype = np.float32)
 		self.terminal = np.zeros((replay_mem_size, 1), dtype = np.bool_)
 		self.return_state = np.zeros((frames_per_state, frame_height, frame_width), dtype = np.uint8)
 
@@ -45,7 +45,7 @@ class Experience:
 		assert self.len >= self.frames_per_state
 		states = np.zeros((mbsize, self.frames_per_state + 1, self.height, self.width), dtype = np.uint8)
 		action = np.zeros((mbsize, 1), dtype = np.uint8)
-		reward = np.zeros((mbsize, 1), dtype = np.int32)
+		reward = np.zeros((mbsize, 1), dtype = np.float32)
 		terminal = np.zeros((mbsize, 1), dtype = np.bool_)
 
 		cnt = 0

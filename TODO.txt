@@ -1,6 +1,6 @@
 TODO:
 - Gradient checking
-- Test Q-learning on deterministic game
+- Implement screen recording
 - Test speed on GPU
 - Check CPU-GPU memory roundtrip
 - Clean up code, shorten params' names
@@ -9,6 +9,11 @@ TODO:
 - Test Double Q-learning
 
 DONE:
+- Read network type from network's weights file
+- Move clone_target to Network class
+- Separate the case of not fixing Q-target
+- Clone target network right after creation
+- Test Q-learning on deterministic game
 - Scale pixel's value on GPU
 - Fix get first screen of each episode
 - Choose network type from run file or from runtime arguments

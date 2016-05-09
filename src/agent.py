@@ -14,7 +14,6 @@ class Agent:
 	MINIBATCH_SIZE = 32
 	REPLAY_MEMORY_SIZE = 500000
 	REPLAY_START_SIZE = 50000
-	TARGET_NETWORK_UPDATE_FREQUENCY = 10000
 	UPDATE_FREQUENCY = 4
 	VALIDATION_SET_SIZE = 2048
 
@@ -33,12 +32,13 @@ class Agent:
 
 		if load_network_from is None:
 			self.network = Network(num_action, self.mbsize, Agent.AGENT_HISTORY_LENGTH, 
-				frame_height, frame_width, Agent.DISCOUNT_FACTOR, rng, network_type)
+				frame_height, frame_width, Agent.DISCOUNT_FACTOR, Agent.UPDATE_FREQUENCY, rng, self.network_type)
 		else:
 			with open(load_network_from, 'rb') as f:
+				self.network_type = cPickle.load(f)
 				init_params = cPickle.load(f)
 				self.network = Network(num_action, self.mbsize, Agent.AGENT_HISTORY_LENGTH, 
-					frame_height, frame_width, Agent.DISCOUNT_FACTOR, rng, network_type, init_params)
+					frame_height, frame_width, Agent.DISCOUNT_FACTOR, Agent.UPDATE_FREQUENCY, rng, self.network_type, init_params)
 
 	def get_action(self, obs, eps = 0.0, evaluating = False):
 		exp = self.exp_eval if evaluating else self.exp_train
@@ -74,7 +74,8 @@ class Agent:
 			print "Collect validation states"
 			self.validate_states, _, _, _ = self.exp_train.get_random_minibatch(self.validate_size)
 
-		if not evaluating and self.num_train_obs >= Agent.REPLAY_START_SIZE and (self.num_train_obs % Agent.UPDATE_FREQUENCY == 0):
+		if not evaluating and self.num_train_obs >= Agent.REPLAY_START_SIZE \
+			and (self.num_train_obs % Agent.UPDATE_FREQUENCY == 0):
 			self._train_one_minibatch()
 
 	def get_validate_values(self):
@@ -86,14 +87,9 @@ class Agent:
 		return sum_action_values / self.validate_size
 
 	def dump(self, f):
+		cPickle.dump(self.network_type, f, -1)
 		cPickle.dump(self.network.get_params(), f, -1)
 
 	def _train_one_minibatch(self):
 		states, action, reward, terminal = self.exp_train.get_random_minibatch(self.mbsize)
-		if self.num_train_obs % Agent.TARGET_NETWORK_UPDATE_FREQUENCY == 0:
-			# print "\tClone network at obs_count =", self.num_train_obs
-			self._clone_network()
 		loss = self.network.train_one_minibatch(states, action, reward, terminal)
-
-	def _clone_network(self):
-		self.network.clone_target()

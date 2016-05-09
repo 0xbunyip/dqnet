@@ -2,7 +2,6 @@ import numpy as np
 import cv2
 import time
 import os
-import cPickle
 from grid_game import GridGame
 
 class Environment:
@@ -42,16 +41,16 @@ class Environment:
 		while epoch < epoch_count:
 			steps_left = Environment.STEPS_PER_EPOCH
 
-			print "\n============================================"
+			print "\n" + "=" * 50
 			print "Epoch #%d" % (epoch + 1)
 			episode = 0
 			epoch_start = time.time()
 			while steps_left > 0:
 				num_step, _ = self._run_episode(agent, steps_left, obs)
 				steps_left -= num_step
+				episode += 1
 				if steps_left == 0 or episode % 1000 == 0:
 					print "Finished episode #%d, steps_left = %d" % (episode, steps_left)
-				episode += 1
 			epoch_end = time.time()
 			avg_validate_values = agent.get_validate_values()
 			validate_end = time.time()
@@ -90,6 +89,8 @@ class Environment:
 		step_count = 0
 		sum_reward = 0
 
+		self._get_screen(obs) # Get screen to fill the buffer
+
 		if evaluating and Environment.MAX_NO_OP > 0:
 			for _ in xrange(self.rng.randint(Environment.MAX_NO_OP) + 1):
 				self.api.act(0)
@@ -105,7 +106,6 @@ class Environment:
 				print "Action%s = %d" % (" (random)" if is_random else "", self.minimal_actions[action_id])
 				print "Reward = %d" % (reward)
 				raw_input()
-			
 			
 			if not evaluating and self.max_reward > 0:
 				reward = np.clip(reward, -self.max_reward, self.max_reward)
