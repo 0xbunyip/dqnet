@@ -8,17 +8,16 @@ import argparse
 import sys
 
 ############### Hyper-parameters ###############
-
-Environment.EPOCH_COUNT = 2
+Environment.EPOCH_COUNT = 30
 Environment.FRAMES_SKIP = 4
 Environment.FRAME_HEIGHT = 84
 Environment.FRAME_WIDTH = 84
 Environment.MAX_NO_OP = 30
-Environment.MAX_REWARD = 1
+Environment.MAX_REWARD = 0
 Environment.ORIGINAL_HEIGHT = 210
 Environment.ORIGINAL_WIDTH = 160
 Environment.STEPS_PER_EPISODE = 18000
-Environment.STEPS_PER_EPOCH = 50
+Environment.STEPS_PER_EPOCH = 50000
 
 Agent.AGENT_HISTORY_LENGTH = 4
 Agent.DISCOUNT_FACTOR = 0.95
@@ -28,7 +27,7 @@ Agent.INITIAL_EXPLORATION = 1.0
 Agent.MINIBATCH_SIZE = 32
 Agent.REPLAY_MEMORY_SIZE = 500000
 Agent.REPLAY_START_SIZE = 5000
-Agent.UPDATE_FREQUENCY = 1
+Agent.UPDATE_FREQUENCY = 4
 Agent.VALIDATION_SET_SIZE = 1024 # MINIBATCH_SIZE <= VALIDATION_SET_SIZE <= REPLAY_START_SIZE * AGENT_HISTORY_LENGTH
 
 Network.GRAD_MOMENTUM = 0.95
@@ -37,7 +36,7 @@ Network.MAX_ERROR = 0.0
 Network.MIN_SQR_GRAD = 0.01
 Network.SCALE_FACTOR = 255.0
 Network.SQR_GRAD_MOMENTUM = 0.95
-Network.TARGET_NETWORK_UPDATE_FREQUENCY = 10000
+Network.TARGET_NETWORK_UPDATE_FREQUENCY = 50000
 ################################################
 
 def get_arguments(argv):
@@ -56,20 +55,28 @@ def get_arguments(argv):
 	return parser.parse_args(argv)
 
 def main(argv):
-	rng = np.random.RandomState(123)
 	arg = get_arguments(argv)
 
-	if not arg.evaluating:
-		env = Environment(arg.rom_name, rng, display_screen = arg.display_screen)
-		agn = Agent(env.get_action_count(), Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH
-			, rng, arg.network_type)
-		env.train(agn)
-		# env.evaluate(agn)
-	elif arg.network_file is not None:
-		env = Environment(arg.rom_name, rng, display_screen = arg.display_screen)
-		agn = Agent(env.get_action_count(), Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH
-			, rng, arg.network_type, arg.network_file)
-		env.evaluate(agn)
+	learning_rates = [0.00025, 0.0025, 0.025]
+	target_frequecies = [0, 1000, 10000, 50000]
+
+	for lr in learning_rates:
+		for tf in target_frequecies:
+			Network.LEARNING_RATE = lr
+			Network.TARGET_NETWORK_UPDATE_FREQUENCY = tf
+
+			rng = np.random.RandomState(123)
+			if not arg.evaluating:
+				env = Environment(arg.rom_name, rng, display_screen = arg.display_screen)
+				agn = Agent(env.get_action_count(), Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH
+					, rng, arg.network_type)
+				print "\nRUNNING PARAMS = (%.5f, %d)" % (lr, tf)
+				env.train(agn)
+			elif arg.network_file is not None:
+				env = Environment(arg.rom_name, rng, display_screen = arg.display_screen)
+				agn = Agent(env.get_action_count(), Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH
+					, rng, arg.network_type, arg.network_file)
+				env.evaluate(agn)
 
 if __name__ == '__main__':
 	main(sys.argv[1:])

@@ -53,6 +53,8 @@ class Agent:
 				# print "Start training, not enough experience (%d), action = %d" % (self.num_train_obs + 1, random_action)
 				return random_action, True
 			eps = Agent.INITIAL_EXPLORATION + self.eps_decay_rate * min(Agent.FINAL_EXPLORATION_FRAME, self.num_train_obs + 1)
+			# if self.num_train_obs % 1000 == 0:
+			# 	print "num_train_obs, eps =", self.num_train_obs, eps
 
 		if self.rng.rand() < eps:
 			random_action = self.rng.randint(self.num_action)

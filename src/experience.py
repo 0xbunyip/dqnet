@@ -64,5 +64,5 @@ class Experience:
 			action[cnt : cnt + num_ok] = self.action.take(end_id[not_terminal] - 1, mode = 'wrap').reshape(-1, 1)
 			reward[cnt : cnt + num_ok] = self.reward.take(end_id[not_terminal] - 1, mode = 'wrap').reshape(-1, 1)
 			terminal[cnt : cnt + num_ok] = self.terminal.take(end_id[not_terminal] - 1, mode = 'wrap').reshape(-1, 1)
-			cnt += np.sum(num_ok)
+			cnt += num_ok
 		return (states, action, reward, terminal)

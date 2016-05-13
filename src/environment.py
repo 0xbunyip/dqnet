@@ -4,6 +4,8 @@ import time
 import os
 from ale_python_interface import ALEInterface
 
+import scipy.misc
+
 class Environment:
 	"""docstring for Environment"""
 
@@ -33,6 +35,8 @@ class Environment:
 		self.log_dir = ''
 		self.network_dir = ''
 
+		self.im_cnt = 0
+
 	def get_action_count(self):
 		return len(self.minimal_actions)
 
@@ -54,7 +58,8 @@ class Environment:
 				if steps_left == 0 or episode % 100 == 0:
 					print "Finished episode #%d, steps_left = %d" % (episode, steps_left)
 			epoch_end = time.time()
-			avg_validate_values = agent.get_validate_values()
+			# avg_validate_values = agent.get_validate_values()
+			avg_validate_values = 0
 			validate_end = time.time()
 
 			total_train_time = epoch_end - epoch_start
@@ -80,7 +85,8 @@ class Environment:
 		return sum_reward / num_eval_episode
 
 	def _run_episode(self, agent, steps_left, obs, eps = 0.0, evaluating = False):
-		self.api.reset_game()
+		if not evaluating or self.api.game_over():
+			self.api.reset_game()
 		starting_lives = self.api.lives()
 		step_count = 0
 		sum_reward = 0
@@ -115,12 +121,12 @@ class Environment:
 	def _get_screen(self, resized_frame):
 		self.merge_id = (self.merge_id + 1) % 2
 		self.api.getScreenGrayscale(self.merge_frame[self.merge_id, :])
-		return self._resize_frame(self.merge_frame.max(axis = 0), resized_frame)
+		self._resize_frame(self.merge_frame.max(axis = 0), resized_frame)
 				
 	def _resize_frame(self, src_frame, dst_frame):
-		return cv2.resize(src = src_frame, dst = dst_frame,
-						dsize = (Environment.FRAME_WIDTH, Environment.FRAME_HEIGHT), 
-						interpolation = cv2.INTER_LINEAR)
+		cv2.resize(src = src_frame, dst = dst_frame,
+					dsize = (Environment.FRAME_WIDTH, Environment.FRAME_HEIGHT), 
+					interpolation = cv2.INTER_LINEAR)
 
 	def _open_log_files(self, agent):
 		# CREATE A FOLDER TO HOLD RESULTS

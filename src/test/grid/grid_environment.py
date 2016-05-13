@@ -45,12 +45,15 @@ class Environment:
 			print "Epoch #%d" % (epoch + 1)
 			episode = 0
 			epoch_start = time.time()
+			actions_epoch = np.zeros(self.get_action_count())
 			while steps_left > 0:
-				num_step, _ = self._run_episode(agent, steps_left, obs)
+				num_step, _, actions = self._run_episode(agent, steps_left, obs)
+				actions_epoch += actions
 				steps_left -= num_step
 				episode += 1
-				if steps_left == 0 or episode % 1000 == 0:
+				if steps_left == 0 or episode % 100 == 0:
 					print "Finished episode #%d, steps_left = %d" % (episode, steps_left)
+
 			epoch_end = time.time()
 			avg_validate_values = agent.get_validate_values()
 			validate_end = time.time()
@@ -59,6 +62,8 @@ class Environment:
 			total_validate_time = validate_end - epoch_end
 			print "Finished epoch #%d, episode trained = %d, validate values = %.3f, train time = %.0fs, validate time = %.0fs" \
 					% (epoch + 1, episode, avg_validate_values, total_train_time, total_validate_time)
+			print "Action epoch =", actions_epoch
+			
 			self._update_log_files(agent, epoch + 1, episode, avg_validate_values, total_train_time, total_validate_time)
 			epoch += 1
 			if ask_for_more and epoch >= epoch_count:
@@ -78,7 +83,7 @@ class Environment:
 		sum_reward = 0.0
 		for episode in xrange(num_eval_episode):
 			print "New evaluating episode"
-			_, reward = self._run_episode(agent, Environment.STEPS_PER_EPISODE, obs, eps, evaluating = True, print_Q = self.display_screen)
+			_, reward, _ = self._run_episode(agent, Environment.STEPS_PER_EPISODE, obs, eps, evaluating = True, print_Q = self.display_screen)
 			sum_reward += reward
 		print "Average evaluating reward = %.4f" % (sum_reward / num_eval_episode)
 		return sum_reward / num_eval_episode
@@ -96,10 +101,13 @@ class Environment:
 				self.api.act(0)
 
 		is_terminal = self.api.game_over() or (self.api.lives() < starting_lives)
+		actions = np.zeros(self.get_action_count())
 		while step_count < steps_left and not is_terminal:
 			self._get_screen(obs)
 			action_id, is_random = agent.get_action(obs, eps, evaluating)
 			reward = self._repeat_action(self.minimal_actions[action_id])
+
+			actions[self.minimal_actions[action_id]] += 1
 
 			if print_Q:
 				print "Observation = \n", np.int32(obs) - self.api.translate
@@ -114,7 +122,7 @@ class Environment:
 
 			sum_reward += reward
 			step_count += 1
-		return step_count, sum_reward
+		return step_count, sum_reward, actions
 
 	def _repeat_action(self, action):
 		reward = 0
@@ -125,12 +133,12 @@ class Environment:
 	def _get_screen(self, resized_frame):
 		self.merge_id = (self.merge_id + 1) % 1
 		self.api.getScreenGrayscale(self.merge_frame[self.merge_id, :])
-		return self._resize_frame(self.merge_frame.max(axis = 0), resized_frame)
+		self._resize_frame(self.merge_frame.max(axis = 0), resized_frame)
 				
 	def _resize_frame(self, src_frame, dst_frame):
-		return cv2.resize(src = src_frame, dst = dst_frame,
-						dsize = (Environment.FRAME_WIDTH, Environment.FRAME_HEIGHT), 
-						interpolation = cv2.INTER_LINEAR)
+		cv2.resize(src = src_frame, dst = dst_frame,
+					dsize = (Environment.FRAME_WIDTH, Environment.FRAME_HEIGHT), 
+					interpolation = cv2.INTER_LINEAR)
 
 	def _open_log_files(self, agent):
 		# CREATE A FOLDER TO HOLD RESULTS
