@@ -34,22 +34,28 @@ class NeuralAgent(object):
         self.update_frequency = update_frequency
         self.rng = rng
 
-        self.phi_length = self.network.num_frames
-        self.image_width = self.network.input_width
-        self.image_height = self.network.input_height
+        self.phi_length = self.network.channel
+        self.image_width = self.network.width
+        self.image_height = self.network.height
+        # self.phi_length = self.network.num_frames
+        # self.image_width = self.network.input_width
+        # self.image_height = self.network.input_height
 
         # CREATE A FOLDER TO HOLD RESULTS
         time_str = time.strftime("_%m-%d-%H-%M_", time.gmtime())
         self.exp_dir = self.exp_pref + time_str + \
-                       "{}".format(self.network.lr).replace(".", "p") + "_" \
+                       "{}".format(self.network.learning_rate).replace(".", "p") + "_" \
                        + "{}".format(self.network.discount).replace(".", "p")
+        # self.exp_dir = self.exp_pref + time_str + \
+        #                        "{}".format(self.network.lr).replace(".", "p") + "_" \
+        #                        + "{}".format(self.network.discount).replace(".", "p")
 
         try:
             os.stat(self.exp_dir)
         except OSError:
             os.makedirs(self.exp_dir)
 
-        self.num_actions = self.network.num_actions
+        self.num_actions = self.network.num_action
 
 
         self.data_set = experience.Experience(self.replay_memory_size
@@ -223,7 +229,11 @@ class NeuralAgent(object):
         if self.step_counter >= self.phi_length:
             phi = data_set.get_state(cur_img)
             # phi = data_set.phi(cur_img)
-            action = self.network.choose_action(phi, epsilon)
+
+            if self.rng.rand() < epsilon:
+                return self.rng.randint(0, self.num_actions)
+            action = self.network.get_action(phi)
+            # action = self.network.choose_action(phi, epsilon)
         else:
             action = self.rng.randint(0, self.num_actions)
 
@@ -237,19 +247,22 @@ class NeuralAgent(object):
         """
         states, actions, rewards, terminals = \
                                 self.data_set.get_random_minibatch(
-                                    self.network.batch_size)
+                                    self.network.mbsize)
+        # states, actions, rewards, terminals = \
+        #                                 self.data_set.get_random_minibatch(
+        #                                     self.network.batch_size)
 
-        next_states = np.zeros((self.network.batch_size, self.phi_length
-            , self.image_height, self.image_width), dtype = np.uint8)
-        next_states[...] = states[:, 1:, :, :]
-        states = states[:, :-1, :, :]
+        # next_states = np.zeros((self.network.mbsize, self.phi_length
+        #     , self.image_height, self.image_width), dtype = np.uint8)
+        # next_states[...] = states[:, 1:, :, :]
+        # states = states[:, :-1, :, :]
 
         # states, actions, rewards, next_states, terminals = \
         #                         self.data_set.random_batch(
         #                             self.network.batch_size)
 
-        return self.network.train(states, actions, rewards,
-                                  next_states, terminals)
+        return self.network.train_one_minibatch(states, actions, rewards,
+                                  terminals)
 
 
     def end_episode(self, reward, terminal=True):
@@ -299,7 +312,10 @@ class NeuralAgent(object):
     def finish_epoch(self, epoch):
         net_file = open(self.exp_dir + '/network_file_' + str(epoch) + \
                         '.pkl', 'w')
-        cPickle.dump(self.network, net_file, -1)
+        cPickle.dump(self.network.network_type, net_file, -1)
+        cPickle.dump(self.network.get_params(), net_file, -1)
+
+        # cPickle.dump(self.network, net_file, -1)
         net_file.close()
 
     def start_testing(self):
@@ -322,7 +338,12 @@ class NeuralAgent(object):
         if self.holdout_data is not None:
             for i in range(holdout_size):
                 holdout_sum += np.max(
-                    self.network.q_vals(self.holdout_data[i, ...]))
+                    self.network.get_max_action_values(self.holdout_data[i, ...]))
+        # holdout_sum = 0
+        #         if self.holdout_data is not None:
+        #             for i in range(holdout_size):
+        #                 holdout_sum += np.max(
+        #                     self.network.q_vals(self.holdout_data[i, ...]))
 
         self._update_results_file(epoch, self.episode_counter,
                                   holdout_sum / holdout_size)

@@ -14,7 +14,7 @@ import theano
 
 import ale_experiment
 import ale_agent
-import q_network
+from network import Network
 
 def process_args(args, defaults, description):
     """
@@ -205,25 +205,50 @@ def launch(args, defaults, description):
     num_actions = len(ale.getMinimalActionSet())
 
     if parameters.nn_file is None:
-        network = q_network.DeepQLearner(defaults.RESIZED_WIDTH,
-                                         defaults.RESIZED_HEIGHT,
-                                         num_actions,
-                                         parameters.phi_length,
-                                         parameters.discount,
-                                         parameters.learning_rate,
-                                         parameters.rms_decay,
-                                         parameters.rms_epsilon,
-                                         parameters.momentum,
-                                         parameters.clip_delta,
-                                         parameters.freeze_interval,
-                                         parameters.batch_size,
-                                         parameters.network_type,
-                                         parameters.update_rule,
-                                         parameters.batch_accumulator,
-                                         rng)
+        network = Network(num_actions
+                      , parameters.batch_size
+                      , parameters.phi_length
+                      , defaults.RESIZED_HEIGHT
+                      , defaults.RESIZED_WIDTH
+                      , parameters.discount
+                      , parameters.freeze_interval * parameters.update_frequency
+                      , rng
+                      , 'nips')
     else:
-        handle = open(parameters.nn_file, 'r')
-        network = cPickle.load(handle)
+        with open(load_network_from, 'rb') as f:
+            network_type = cPickle.load(f)
+            init_params = cPickle.load(f)
+            network = Network(num_actions
+                      , parameters.batch_size
+                      , parameters.phi_length
+                      , defaults.RESIZED_HEIGHT
+                      , defaults.RESIZED_WIDTH
+                      , parameters.discount
+                      , parameters.freeze_interval * parameters.update_frequency
+                      , rng
+                      , 'nips'
+                      , init_params)
+
+    # if parameters.nn_file is None:
+    #     network = q_network.DeepQLearner(defaults.RESIZED_WIDTH,
+    #                                      defaults.RESIZED_HEIGHT,
+    #                                      num_actions,
+    #                                      parameters.phi_length,
+    #                                      parameters.discount,
+    #                                      parameters.learning_rate,
+    #                                      parameters.rms_decay,
+    #                                      parameters.rms_epsilon,
+    #                                      parameters.momentum,
+    #                                      parameters.clip_delta,
+    #                                      parameters.freeze_interval,
+    #                                      parameters.batch_size,
+    #                                      parameters.network_type,
+    #                                      parameters.update_rule,
+    #                                      parameters.batch_accumulator,
+    #                                      rng)
+    # else:
+    #     handle = open(parameters.nn_file, 'r')
+    #     network = cPickle.load(handle)
 
     agent = ale_agent.NeuralAgent(network,
                                   parameters.epsilon_start,
