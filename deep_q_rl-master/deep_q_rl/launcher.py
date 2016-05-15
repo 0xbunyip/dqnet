@@ -205,13 +205,14 @@ def launch(args, defaults, description):
     num_actions = len(ale.getMinimalActionSet())
 
     if parameters.nn_file is None:
+        Network.MAX_ERROR = 1.0 # Nature
         network = Network(num_actions
                       , parameters.batch_size
                       , parameters.phi_length
                       , defaults.RESIZED_HEIGHT
                       , defaults.RESIZED_WIDTH
                       , parameters.discount
-                      , parameters.freeze_interval * parameters.update_frequency
+                      , parameters.update_frequency
                       , rng
                       , 'nips')
     else:

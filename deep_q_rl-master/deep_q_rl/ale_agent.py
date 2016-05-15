@@ -325,11 +325,11 @@ class NeuralAgent(object):
 
     def finish_testing(self, epoch):
         self.testing = False
-        holdout_size = 3200
+        holdout_size = 32
 
         if self.holdout_data is None and self.data_set.len > holdout_size:
             self.holdout_data = \
-                self.data_set.get_random_minibatch(holdout_size)[0][:, :-1, :, :]
+                self.data_set.get_random_minibatch(holdout_size)[0]
 
         # if self.holdout_data is None and len(self.data_set) > holdout_size:
         #     self.holdout_data = self.data_set.random_batch(holdout_size)[0]
@@ -337,8 +337,7 @@ class NeuralAgent(object):
         holdout_sum = 0
         if self.holdout_data is not None:
             for i in range(holdout_size):
-                holdout_sum += np.max(
-                    self.network.get_max_action_values(self.holdout_data[i, ...]))
+                holdout_sum += self.network.get_max_action_values(self.holdout_data[i:i+1, ...])
         # holdout_sum = 0
         #         if self.holdout_data is not None:
         #             for i in range(holdout_size):
