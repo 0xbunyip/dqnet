@@ -325,7 +325,7 @@ class NeuralAgent(object):
 
     def finish_testing(self, epoch):
         self.testing = False
-        holdout_size = 32
+        holdout_size = 3200
 
         if self.holdout_data is None and self.data_set.len > holdout_size:
             self.holdout_data = \

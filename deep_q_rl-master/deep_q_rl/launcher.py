@@ -13,7 +13,7 @@ import numpy as np
 import theano
 
 import ale_experiment
-import ale_agent
+from agent import Agent
 from network import Network
 
 def process_args(args, defaults, description):
@@ -204,33 +204,6 @@ def launch(args, defaults, description):
 
     num_actions = len(ale.getMinimalActionSet())
 
-    if parameters.nn_file is None:
-        Network.MAX_ERROR = 1.0 # Nature
-        network = Network(num_actions
-                      , parameters.batch_size
-                      , parameters.phi_length
-                      , defaults.RESIZED_HEIGHT
-                      , defaults.RESIZED_WIDTH
-                      , parameters.discount
-                      , parameters.update_frequency
-                      , rng
-                      , 'nature')
-    else:
-        Network.MAX_ERROR = 1.0 # Nature
-        with open(parameters.nn_file, 'rb') as f:
-            network_type = cPickle.load(f)
-            init_params = cPickle.load(f)
-            network = Network(num_actions
-                      , parameters.batch_size
-                      , parameters.phi_length
-                      , defaults.RESIZED_HEIGHT
-                      , defaults.RESIZED_WIDTH
-                      , parameters.discount
-                      , parameters.update_frequency
-                      , rng
-                      , 'nature'
-                      , init_params)
-
     # if parameters.nn_file is None:
     #     network = q_network.DeepQLearner(defaults.RESIZED_WIDTH,
     #                                      defaults.RESIZED_HEIGHT,
@@ -252,15 +225,25 @@ def launch(args, defaults, description):
     #     handle = open(parameters.nn_file, 'r')
     #     network = cPickle.load(handle)
 
-    agent = ale_agent.NeuralAgent(network,
-                                  parameters.epsilon_start,
-                                  parameters.epsilon_min,
-                                  parameters.epsilon_decay,
-                                  parameters.replay_memory_size,
-                                  parameters.experiment_prefix,
-                                  parameters.replay_start_size,
-                                  parameters.update_frequency,
-                                  rng)
+    Network.MAX_ERROR = 1.0
+    Agent.DISCOUNT_FACTOR = 0.99
+    Agent.VALIDATION_SET_SIZE = 3200
+    Agent.REPLAY_START_SIZE = parameters.replay_start_size
+    agent = Agent(num_actions,
+                  defaults.RESIZED_HEIGHT,
+                  defaults.RESIZED_WIDTH,
+                  rng,
+                  'nature',
+                  parameters.nn_file)
+    # agent = ale_agent.NeuralAgent(network,
+    #               parameters.epsilon_start,
+    #               parameters.epsilon_min,
+    #               parameters.epsilon_decay,
+    #               parameters.replay_memory_size,
+    #               parameters.experiment_prefix,
+    #               parameters.replay_start_size,
+    #               parameters.update_frequency,
+    #               rng)
 
     experiment = ale_experiment.ALEExperiment(ale, agent,
                                               defaults.RESIZED_WIDTH,
@@ -272,7 +255,8 @@ def launch(args, defaults, description):
                                               parameters.frame_skip,
                                               parameters.death_ends_episode,
                                               parameters.max_start_nullops,
-                                              rng)
+                                              rng,
+                                              parameters.experiment_prefix)
 
 
     experiment.run()

@@ -7,6 +7,8 @@ Author: Nathan Sprague
 import logging
 import numpy as np
 import cv2
+import time
+import os
 
 # Number of rows to crop off the bottom of the (downsampled) screen.
 # This is appropriate for breakout, but it may need to be modified
@@ -17,7 +19,7 @@ CROP_OFFSET = 8
 class ALEExperiment(object):
     def __init__(self, ale, agent, resized_width, resized_height,
                  resize_method, num_epochs, epoch_length, test_length,
-                 frame_skip, death_ends_episode, max_start_nullops, rng):
+                 frame_skip, death_ends_episode, max_start_nullops, rng, exp_pre):
         self.ale = ale
         self.agent = agent
         self.num_epochs = num_epochs
@@ -41,6 +43,24 @@ class ALEExperiment(object):
         self.max_start_nullops = max_start_nullops
         self.rng = rng
 
+        # CREATE A FOLDER TO HOLD RESULTS
+        time_str = time.strftime("_%m-%d-%H-%M_", time.gmtime())
+        exp_dir = exp_pre + time_str + \
+                       "{}".format(agent.network.learning_rate).replace(".", "p") \
+                       + "_" \
+                       + "{}".format(agent.network.discount).replace(".", "p")
+
+        try:
+            os.stat(exp_dir)
+        except OSError:
+            os.makedirs(exp_dir)
+
+        self.exp_dir = exp_dir
+        self.results_file = open(self.exp_dir + '/results.csv', 'w', 0)
+        self.results_file.write(\
+            'epoch,num_episodes,total_reward,reward_per_epoch,mean_q\n')
+        self.results_file.flush()
+
     def run(self):
         """
         Run the desired number of training epochs, a testing epoch
@@ -48,12 +68,25 @@ class ALEExperiment(object):
         """
         for epoch in range(1, self.num_epochs + 1):
             self.run_epoch(epoch, self.epoch_length)
-            self.agent.finish_epoch(epoch)
+
+            with open(self.exp_dir + '/network_file_' + str(epoch) + \
+                        '.pkl', 'wb') as f:
+                self.agent.dump(f)
+            # self.agent.finish_epoch(epoch)
 
             if self.test_length > 0:
-                self.agent.start_testing()
+                # self.agent.start_testing()
+                self.total_reward = 0
+                self.episode_counter = 0
                 self.run_epoch(epoch, self.test_length, True)
-                self.agent.finish_testing(epoch)
+
+                holdout_sum = self.agent.get_validate_values()
+                out = "{},{},{},{},{}\n".format(epoch, self.episode_counter, 
+                    self.total_reward, self.total_reward / float(self.episode_counter),
+                    holdout_sum)
+                self.results_file.write(out)
+                self.results_file.flush()
+                # self.agent.finish_testing(epoch)
 
     def run_epoch(self, epoch, num_steps, testing=False):
         """ Run one 'epoch' of training or testing, where an epoch is defined
@@ -73,6 +106,10 @@ class ALEExperiment(object):
             logging.info(prefix + " epoch: " + str(epoch) + " steps_left: " +
                          str(steps_left))
             _, num_steps = self.run_episode(steps_left, testing)
+
+            if testing:
+                self.episode_counter += 1
+                self.total_reward += self.episode_reward
 
             steps_left -= num_steps
 
@@ -133,23 +170,39 @@ class ALEExperiment(object):
         """
 
         self._init_episode()
+        self.episode_reward = 0
 
         start_lives = self.ale.lives()
 
-        action = self.agent.start_episode(self.get_observation())
+        obs = self.get_observation()
+        action, _ = self.agent.get_action(obs, 0.05, testing)
+        # action = self.agent.start_episode(self.get_observation())
         num_steps = 0
         while True:
             reward = self._step(self.min_action_set[action])
+            self.episode_reward += reward
+            reward = np.clip(reward, -1, 1)
+            # reward = self._step(self.min_action_set[action])
+
             self.terminal_lol = (self.death_ends_episode and not testing and
                                  self.ale.lives() < start_lives)
             terminal = self.ale.game_over() or self.terminal_lol
             num_steps += 1
 
             if terminal or num_steps >= max_steps:
-                self.agent.end_episode(reward, terminal)
+                # self.agent.end_episode(reward, terminal)
+                self.agent.add_experience(obs, True, action, reward, testing)
                 break
+            else:
+                self.agent.add_experience(obs, False, action, reward, testing)
 
-            action = self.agent.step(reward, self.get_observation())
+            # if terminal or num_steps >= max_steps:
+            #     self.agent.end_episode(reward, terminal)
+            #     break
+
+            obs = self.get_observation()
+            action, _ = self.agent.get_action(obs, 0.05, testing)
+            # action = self.agent.step(reward, self.get_observation())
         return terminal, num_steps
 
 
