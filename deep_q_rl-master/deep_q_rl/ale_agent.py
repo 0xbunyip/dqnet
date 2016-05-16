@@ -337,7 +337,8 @@ class NeuralAgent(object):
         holdout_sum = 0
         if self.holdout_data is not None:
             for i in range(holdout_size):
-                holdout_sum += self.network.get_max_action_values(self.holdout_data[i:i+1, ...])
+                holdout_sum += self.network.get_max_action_values(\
+                    self.holdout_data[i:i+1, ...])[0]
         # holdout_sum = 0
         #         if self.holdout_data is not None:
         #             for i in range(holdout_size):

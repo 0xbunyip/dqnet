@@ -214,9 +214,10 @@ def launch(args, defaults, description):
                       , parameters.discount
                       , parameters.update_frequency
                       , rng
-                      , 'nips')
+                      , 'nature')
     else:
-        with open(load_network_from, 'rb') as f:
+        Network.MAX_ERROR = 1.0 # Nature
+        with open(parameters.nn_file, 'rb') as f:
             network_type = cPickle.load(f)
             init_params = cPickle.load(f)
             network = Network(num_actions
@@ -225,9 +226,9 @@ def launch(args, defaults, description):
                       , defaults.RESIZED_HEIGHT
                       , defaults.RESIZED_WIDTH
                       , parameters.discount
-                      , parameters.freeze_interval * parameters.update_frequency
+                      , parameters.update_frequency
                       , rng
-                      , 'nips'
+                      , 'nature'
                       , init_params)
 
     # if parameters.nn_file is None:
