@@ -12,7 +12,7 @@ import cPickle
 import numpy as np
 import theano
 
-import ale_experiment
+from environment import Environment
 from agent import Agent
 from network import Network
 
@@ -186,23 +186,23 @@ def launch(args, defaults, description):
     if parameters.cudnn_deterministic:
         theano.config.dnn.conv.algo_bwd = 'deterministic'
 
-    ale = ale_python_interface.ALEInterface()
-    ale.setInt('random_seed', rng.randint(1000))
+    # ale = ale_python_interface.ALEInterface()
+    # ale.setInt('random_seed', rng.randint(1000))
 
-    if parameters.display_screen:
-        import sys
-        if sys.platform == 'darwin':
-            import pygame
-            pygame.init()
-            ale.setBool('sound', False) # Sound doesn't work on OSX
+    # if parameters.display_screen:
+    #     import sys
+    #     if sys.platform == 'darwin':
+    #         import pygame
+    #         pygame.init()
+    #         ale.setBool('sound', False) # Sound doesn't work on OSX
 
-    ale.setBool('display_screen', parameters.display_screen)
-    ale.setFloat('repeat_action_probability',
-                 parameters.repeat_action_probability)
+    # ale.setBool('display_screen', parameters.display_screen)
+    # ale.setFloat('repeat_action_probability',
+    #              parameters.repeat_action_probability)
 
-    ale.loadROM(full_rom_path)
+    # ale.loadROM(full_rom_path)
 
-    num_actions = len(ale.getMinimalActionSet())
+    # num_actions = len(ale.getMinimalActionSet())
 
     # if parameters.nn_file is None:
     #     network = q_network.DeepQLearner(defaults.RESIZED_WIDTH,
@@ -225,16 +225,7 @@ def launch(args, defaults, description):
     #     handle = open(parameters.nn_file, 'r')
     #     network = cPickle.load(handle)
 
-    Network.MAX_ERROR = 1.0
-    Agent.DISCOUNT_FACTOR = 0.99
-    Agent.VALIDATION_SET_SIZE = 3200
-    Agent.REPLAY_START_SIZE = parameters.replay_start_size
-    agent = Agent(num_actions,
-                  defaults.RESIZED_HEIGHT,
-                  defaults.RESIZED_WIDTH,
-                  rng,
-                  'nature',
-                  parameters.nn_file)
+    
     # agent = ale_agent.NeuralAgent(network,
     #               parameters.epsilon_start,
     #               parameters.epsilon_min,
@@ -245,21 +236,40 @@ def launch(args, defaults, description):
     #               parameters.update_frequency,
     #               rng)
 
-    experiment = ale_experiment.ALEExperiment(ale, agent,
-                                              defaults.RESIZED_WIDTH,
-                                              defaults.RESIZED_HEIGHT,
-                                              parameters.resize_method,
-                                              parameters.epochs,
-                                              parameters.steps_per_epoch,
-                                              parameters.steps_per_test,
-                                              parameters.frame_skip,
-                                              parameters.death_ends_episode,
-                                              parameters.max_start_nullops,
-                                              rng,
-                                              parameters.experiment_prefix)
+    Environment.EPOCH_COUNT = parameters.epochs
+    Environment.STEPS_PER_EPOCH =  parameters.steps_per_epoch
+    experiment = Environment(parameters.rom,
+                            rng,
+                            parameters.display_screen)
+    experiment.api.setFloat('repeat_action_probability',
+                    parameters.repeat_action_probability)
+    # experiment = ale_experiment.ALEExperiment(ale, agent,
+    #                                               defaults.RESIZED_WIDTH,
+    #                                               defaults.RESIZED_HEIGHT,
+    #                                               parameters.resize_method,
+    #                                               parameters.epochs,
+    #                                               parameters.steps_per_epoch,
+    #                                               parameters.steps_per_test,
+    #                                               parameters.frame_skip,
+    #                                               parameters.death_ends_episode,
+    #                                               parameters.max_start_nullops,
+    #                                               rng,
+    #                                               parameters.experiment_prefix)
+
+    Network.MAX_ERROR = 1.0
+    Agent.DISCOUNT_FACTOR = 0.99
+    Agent.VALIDATION_SET_SIZE = 3200
+    Agent.REPLAY_START_SIZE = parameters.replay_start_size
+    agent = Agent(experiment.get_action_count(),
+                  defaults.RESIZED_HEIGHT,
+                  defaults.RESIZED_WIDTH,
+                  rng,
+                  'nature',
+                  parameters.nn_file)
 
 
-    experiment.run()
+    # experiment.run()
+    experiment.train(agent)
 
 
 
