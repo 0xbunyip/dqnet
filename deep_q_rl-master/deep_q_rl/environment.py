@@ -7,6 +7,7 @@ from ale_python_interface import ALEInterface
 class Environment:
 	"""docstring for Environment"""
 
+	BUFFER_LENGTH = 2
 	EPOCH_COUNT = 200
 	FRAMES_SKIP = 4
 	FRAME_HEIGHT = 84
@@ -26,21 +27,27 @@ class Environment:
 		self.rng = rng
 		self.api.loadROM('../roms/' + self.rom_name)
 		self.minimal_actions = self.api.getMinimalActionSet()
-		self.merge_frame = np.zeros((2, Environment.ORIGINAL_HEIGHT, Environment.ORIGINAL_WIDTH), dtype = np.uint8)
+		self.repeat = Environment.FRAMES_SKIP
+		self.buffer_len = Environment.BUFFER_LENGTH
+		self.height = Environment.FRAME_HEIGHT
+		self.width = Environment.FRAME_WIDTH
+		self.merge_frame = np.zeros((self.buffer_len
+								, Environment.ORIGINAL_HEIGHT
+								, Environment.ORIGINAL_WIDTH)
+								, dtype = np.uint8)
 		self.merge_id = 0
 		self.max_reward = Environment.MAX_REWARD
 		self.log_dir = ''
 		self.network_dir = ''
-
-		self.im_cnt = 0
 
 	def get_action_count(self):
 		return len(self.minimal_actions)
 
 	def train(self, agent):
 		self._open_log_files(agent)
-		obs = np.zeros((Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH), dtype = np.uint8)
+		obs = np.zeros((self.height, self.width), dtype = np.uint8)
 		epoch_count = Environment.EPOCH_COUNT
+
 		for epoch in xrange(epoch_count):
 			steps_left = Environment.STEPS_PER_EPOCH
 
@@ -52,7 +59,7 @@ class Environment:
 				num_step, _ = self._run_episode(agent, steps_left, obs)
 				steps_left -= num_step
 				episode += 1
-				if steps_left == 0 or episode % 100 == 0:
+				if steps_left == 0 or episode % 10 == 0:
 					print "Finished episode #%d, steps_left = %d" % (episode, steps_left)
 			epoch_end = time.time()
 
@@ -70,7 +77,7 @@ class Environment:
 	def evaluate(self, agent, num_eval_episode = 30, eps = 0.05, obs = None):
 		print "\n***Start evaluating"
 		if obs is None:
-			obs = np.zeros((Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH), dtype = np.uint8)
+			obs = np.zeros((self.height, self.width), dtype = np.uint8)
 		self.api.reset_game()
 		sum_reward = 0.0
 		sum_step = 0.0
@@ -86,15 +93,17 @@ class Environment:
 	def _run_episode(self, agent, steps_left, obs, eps = 0.0, evaluating = False):
 		if not evaluating or self.api.game_over():
 			self.api.reset_game()
+			if Environment.MAX_NO_OP > 0:
+				num_no_op = self.rng.randint(Environment.MAX_NO_OP) + 1
+				for _ in xrange(num_no_op):
+					self.api.act(0)
+
 		starting_lives = self.api.lives()
 		step_count = 0
 		sum_reward = 0
 
-		self._get_screen(obs) # Get screen to fill the buffer
-		
-		if evaluating and Environment.MAX_NO_OP > 0:
-			for _ in xrange(self.rng.randint(Environment.MAX_NO_OP) + 1):
-				self.api.act(0)
+		for _ in xrange(self.buffer_len):
+			self._update_buffer()
 
 		is_terminal = self.api.game_over() or (self.api.lives() < starting_lives)
 		while step_count < steps_left and not is_terminal:
@@ -113,20 +122,24 @@ class Environment:
 			
 		return step_count, sum_reward
 
+	def _update_buffer(self):
+		self.api.getScreenGrayscale(self.merge_frame[self.merge_id, :])
+		self.merge_id = (self.merge_id + 1) % self.buffer_len
+
 	def _repeat_action(self, action):
 		reward = 0
-		for _ in xrange(Environment.FRAMES_SKIP):
+		for i in xrange(self.repeat):
 			reward += self.api.act(action)
+			if i + self.buffer_len >= self.repeat:
+				self._update_buffer()
 		return reward
 
 	def _get_screen(self, resized_frame):
-		self.merge_id = (self.merge_id + 1) % 2
-		self.api.getScreenGrayscale(self.merge_frame[self.merge_id, :])
 		self._resize_frame(self.merge_frame.max(axis = 0), resized_frame)
 				
 	def _resize_frame(self, src_frame, dst_frame):
 		cv2.resize(src = src_frame, dst = dst_frame,
-					dsize = (Environment.FRAME_WIDTH, Environment.FRAME_HEIGHT), 
+					dsize = (self.width, self.height), 
 					interpolation = cv2.INTER_LINEAR)
 
 	def _open_log_files(self, agent):
