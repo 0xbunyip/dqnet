@@ -7,7 +7,7 @@ from ale_python_interface import ALEInterface
 class Environment:
 	"""docstring for Environment"""
 
-	BUFFER_LENGTH = 2
+	BUFFER_LENGTH = 1
 	EPOCH_COUNT = 200
 	FRAMES_SKIP = 4
 	FRAME_HEIGHT = 84
@@ -54,24 +54,24 @@ class Environment:
 			print "\n" + "=" * 50
 			print "Epoch #%d" % (epoch + 1)
 			episode = 0
-			epoch_start = time.time()
+			train_start = time.time()
 			while steps_left > 0:
 				num_step, _ = self._run_episode(agent, steps_left, obs)
 				steps_left -= num_step
 				episode += 1
 				if steps_left == 0 or episode % 10 == 0:
 					print "Finished episode #%d, steps_left = %d" % (episode, steps_left)
-			epoch_end = time.time()
+			train_end = time.time()
 
 			avg_validate_values = agent.get_validate_values()
 			eval_values = self.evaluate(agent)
 			test_end = time.time()
 
-			total_train_time = epoch_end - epoch_start
-			test_time = test_end - epoch_end
+			train_time = train_end - train_start
+			test_time = test_end - train_end
 			print "Finished epoch #%d, episode trained = %d, validate values = %.3f, train time = %.0fs, test time = %.0fs, evaluate reward = %.3f" \
-					% (epoch + 1, episode, avg_validate_values, total_train_time, test_time, eval_values)
-			self._update_log_files(agent, epoch + 1, episode, avg_validate_values, total_train_time, test_time, eval_values)
+					% (epoch + 1, episode, avg_validate_values, train_time, test_time, eval_values)
+			self._update_log_files(agent, epoch + 1, episode, avg_validate_values, train_time, test_time, eval_values)
 		print "Number of frame seen:", agent.num_train_obs
 
 	def evaluate(self, agent, num_eval_episode = 30, eps = 0.05, obs = None):
@@ -111,12 +111,13 @@ class Environment:
 			action_id, _ = agent.get_action(obs, eps, evaluating)
 			
 			reward = self._repeat_action(self.minimal_actions[action_id])
+			reward_clip = reward
 			if not evaluating and self.max_reward > 0:
-				reward = np.clip(reward, -self.max_reward, self.max_reward)
+				reward_clip = np.clip(reward, -self.max_reward, self.max_reward)
 
 			life_lost = (not evaluating) and (self.api.lives() < starting_lives)
 			is_terminal = self.api.game_over() or life_lost or (step_count + 1 >= steps_left)
-			agent.add_experience(obs, is_terminal, action_id, reward, evaluating)
+			agent.add_experience(obs, is_terminal, action_id, reward_clip, evaluating)
 			sum_reward += reward
 			step_count += 1
 			

@@ -2,6 +2,7 @@ import numpy as np
 import cPickle
 from experience import Experience
 from network import Network
+import matplotlib.pyplot as plt
 
 class Agent:
 	"""docstring for Agent"""
@@ -61,9 +62,18 @@ class Agent:
 			# print "Uniform random action (obs = %d, eps = %.3f), action = %d" % (self.num_train_obs + 1, eps, random_action)
 			return random_action, True
 
-		action = self.network.get_action(exp.get_state(obs))
+		state = exp.get_state(obs)
+		# self._plot_state(state)
+		action = self.network.get_action(state)
 		# print "Greedy action = %d" % (action)
 		return action, False
+
+	def _plot_state(self, state):
+		for i in xrange(state.shape[0]):
+			plt.subplot(1, state.shape[0], i + 1)
+			plt.imshow(state[i, :, :], interpolation = 'none', cmap = "gray")
+			plt.grid(color = 'r', linestyle = '-', linewidth = .4)
+		plt.show()
 
 	def add_experience(self, obs, is_terminal, action, reward, evaluating = False):
 		exp = self.exp_eval
