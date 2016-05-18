@@ -241,8 +241,6 @@ def launch(args, defaults, description):
     experiment = Environment(parameters.rom,
                             rng,
                             parameters.display_screen)
-    experiment.api.setFloat('repeat_action_probability',
-                    parameters.repeat_action_probability)
     # experiment = ale_experiment.ALEExperiment(ale, agent,
     #                                               defaults.RESIZED_WIDTH,
     #                                               defaults.RESIZED_HEIGHT,

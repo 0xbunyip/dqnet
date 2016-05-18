@@ -7,7 +7,7 @@ from ale_python_interface import ALEInterface
 class Environment:
 	"""docstring for Environment"""
 
-	BUFFER_LENGTH = 1
+	BUFFER_LENGTH = 2
 	EPOCH_COUNT = 200
 	FRAMES_SKIP = 4
 	FRAME_HEIGHT = 84
@@ -20,6 +20,7 @@ class Environment:
 	STEPS_PER_EPOCH = 50000
 
 	def __init__(self, rom_name, rng, display_screen = False):
+		self.resize_method = 'scale'
 		self.api = ALEInterface()
 		self.api.setInt('random_seed', 123)
 		self.api.setBool('display_screen', display_screen)
@@ -27,6 +28,7 @@ class Environment:
 		self.rng = rng
 		self.api.loadROM('../roms/' + self.rom_name)
 		self.minimal_actions = self.api.getMinimalActionSet()
+		self.api.setFloat('repeat_action_probability', 0.0)
 		self.repeat = Environment.FRAMES_SKIP
 		self.buffer_len = Environment.BUFFER_LENGTH
 		self.height = Environment.FRAME_HEIGHT
@@ -78,7 +80,6 @@ class Environment:
 		print "\n***Start evaluating"
 		if obs is None:
 			obs = np.zeros((self.height, self.width), dtype = np.uint8)
-		self.api.reset_game()
 		sum_reward = 0.0
 		sum_step = 0.0
 		for episode in xrange(num_eval_episode):
@@ -91,12 +92,12 @@ class Environment:
 		return sum_reward / num_eval_episode
 
 	def _run_episode(self, agent, steps_left, obs, eps = 0.0, evaluating = False):
-		if not evaluating or self.api.game_over():
-			self.api.reset_game()
-			if Environment.MAX_NO_OP > 0:
-				num_no_op = self.rng.randint(Environment.MAX_NO_OP) + 1
-				for _ in xrange(num_no_op):
-					self.api.act(0)
+		self.api.reset_game()
+		if Environment.MAX_NO_OP > 0:
+			num_no_op = self.rng.randint(Environment.MAX_NO_OP) + 1
+			# print "Number of no-op = %d" % (num_no_op)
+			for _ in xrange(num_no_op):
+				self.api.act(0)
 
 		starting_lives = self.api.lives()
 		step_count = 0
@@ -107,7 +108,8 @@ class Environment:
 
 		is_terminal = self.api.game_over() or (self.api.lives() < starting_lives)
 		while step_count < steps_left and not is_terminal:
-			self._get_screen(obs)
+			obs = self.get_observation()
+			# self._get_screen(obs)
 			action_id, _ = agent.get_action(obs, eps, evaluating)
 			
 			reward = self._repeat_action(self.minimal_actions[action_id])
@@ -124,7 +126,8 @@ class Environment:
 		return step_count, sum_reward
 
 	def _update_buffer(self):
-		self.api.getScreenGrayscale(self.merge_frame[self.merge_id, :])
+		self.api.getScreenGrayscale(self.merge_frame[self.merge_id, ...])
+		# print self.api.getEpisodeFrameNumber()
 		self.merge_id = (self.merge_id + 1) % self.buffer_len
 
 	def _repeat_action(self, action):
@@ -135,13 +138,47 @@ class Environment:
 				self._update_buffer()
 		return reward
 
-	def _get_screen(self, resized_frame):
-		self._resize_frame(self.merge_frame.max(axis = 0), resized_frame)
+	# def _get_screen(self, resized_frame):
+	# 	self._resize_frame(self.merge_frame.max(axis = 0), resized_frame)
 				
-	def _resize_frame(self, src_frame, dst_frame):
-		cv2.resize(src = src_frame, dst = dst_frame,
-					dsize = (self.width, self.height), 
-					interpolation = cv2.INTER_LINEAR)
+	# def _resize_frame(self, src_frame, dst_frame):
+	# 	cv2.resize(src = src_frame, dst = dst_frame,
+	# 				dsize = (self.width, self.height), 
+	# 				interpolation = cv2.INTER_LINEAR)
+
+	def get_observation(self):
+		""" Resize and merge the previous two screen images """
+
+		# assert self.buffer_count >= 2
+		index = self.merge_id % self.buffer_len - 1
+		max_image = np.maximum(self.merge_frame[index, ...],
+			self.merge_frame[index - 1, ...])
+		return self.resize_image(max_image)
+
+	def resize_image(self, image):
+		""" Appropriately resize a single image """
+
+		if self.resize_method == 'crop':
+			# resize keeping aspect ratio
+			resize_height = int(round(
+				float(self.height) * self.resized_width / self.width))
+
+			resized = cv2.resize(image,
+				(self.resized_width, resize_height),
+				interpolation=cv2.INTER_LINEAR)
+
+			# Crop the part we want
+			crop_y_cutoff = resize_height - 8 - self.resized_height
+			cropped = resized[crop_y_cutoff:
+			crop_y_cutoff + self.resized_height, :]
+
+			return cropped
+		elif self.resize_method == 'scale':
+			return cv2.resize(image,
+				(self.width, self.height),
+				interpolation=cv2.INTER_LINEAR)
+		else:
+			raise ValueError('Unrecognized image resize method.')
 
 	def _open_log_files(self, agent):
 		# CREATE A FOLDER TO HOLD RESULTS
