@@ -44,28 +44,9 @@ class Environment:
 		self.ale_experiment_init()
 
 	def ale_experiment_init(self):
-		# CREATE A FOLDER TO HOLD RESULTS
-		time_str = time.strftime("_%m-%d-%H-%M", time.gmtime())
-		exp_dir = 'breakout' + time_str
-
-		try:
-			os.stat(exp_dir)
-		except OSError:
-			os.makedirs(exp_dir)
-
-		self.exp_dir = exp_dir
-		with open(self.exp_dir + '/info.txt', 'w') as f:
-			f.write('Test env + agent + net + exp, use ale_experiment methods\n')
-			f.write('Keep launcher.py and Environment.__init__ the same\n')
-
-		self.results_file = open(self.exp_dir + '/results.csv', 'w', 0)
-		self.results_file.write(\
-			'epoch,num_episodes,total_reward,reward_per_epoch,mean_q\n')
-		self.results_file.flush()
-
 		self.num_epochs = Environment.EPOCH_COUNT
 		self.epoch_length = Environment.STEPS_PER_EPOCH
-		self.test_length = 100
+		self.test_length = 125000
 		self.resize_method = 'scale'
 		self.terminal_lol = False # Most recent episode ended on a loss of life
 		self.max_start_nullops = Environment.MAX_NO_OP
@@ -79,28 +60,37 @@ class Environment:
 		Run the desired number of training epochs, a testing epoch
 		is conducted after each training epoch.
 		"""
+		self._open_log_files(agent)
 		self.agent = agent
 		for epoch in range(1, self.num_epochs + 1):
-			self.run_epoch(epoch, self.epoch_length)
+			train_start = time.time()
+			train_episode, _ = self.run_epoch(epoch, self.epoch_length)
+			train_stop = time.time()
 
-			with open(self.exp_dir + '/network_file_' + str(epoch) + \
-						'.pkl', 'wb') as f:
-				self.agent.dump(f)
+			# with open(self.exp_dir + '/network_file_' + str(epoch) + \
+			# 			'.pkl', 'wb') as f:
+			# 	self.agent.dump(f)
 			# self.agent.finish_epoch(epoch)
 
+			test_reward = 0
 			if self.test_length > 0:
 				# self.agent.start_testing()
-				self.total_reward = 0
-				self.episode_counter = 0
-				self.run_epoch(epoch, self.test_length, True)
+				test_episode, test_reward = self.run_epoch(epoch, self.test_length, True)
+				test_stop = time.time()
 
 				holdout_sum = self.agent.get_validate_values()
-				out = "{},{},{},{},{}\n".format(epoch, self.episode_counter, 
-					self.total_reward, self.total_reward / float(self.episode_counter),
-					holdout_sum)
-				self.results_file.write(out)
-				self.results_file.flush()
+				test_reward /= float(test_episode)
+				# out = "{},{},{},{},{}\n".format(epoch, self.episode_counter, 
+				# 	self.total_reward, self.total_reward / float(self.episode_counter),
+				# 	holdout_sum)
+				# self.results_file.write(out)
+				# self.results_file.flush()
 				# self.agent.finish_testing(epoch)
+
+			train_time = train_stop - train_start
+			test_time = test_stop - train_stop
+			self._update_log_files(agent, epoch, train_episode, \
+				holdout_sum, train_time, test_time, test_reward)
 
 	def run_epoch(self, epoch, num_steps, testing=False):
 		""" Run one 'epoch' of training or testing, where an epoch is defined
@@ -115,16 +105,18 @@ class Environment:
 		"""
 		self.terminal_lol = False # Make sure each epoch starts with a reset.
 		steps_left = num_steps
+		episode = 0
+		reward = 0
 		while steps_left > 0:
 			prefix = "testing" if testing else "training"
 			print prefix + " epoch: " + str(epoch) + " steps_left: " + str(steps_left)
 			_, num_steps = self.run_episode(steps_left, testing)
 
-			if testing:
-				self.episode_counter += 1
-				self.total_reward += self.episode_reward
+			episode += 1
+			reward += self.episode_reward
 
 			steps_left -= num_steps
+		return episode, reward
 
 
 	def _init_episode(self):
@@ -187,7 +179,9 @@ class Environment:
 
 		start_lives = self.api.lives()
 
-		obs = self.get_observation()
+		obs = np.zeros((self.height, self.width), dtype = np.uint8)
+		self._get_screen(obs)
+		# obs = self.get_observation()
 		action, _ = self.agent.get_action(obs, 0.05, testing)
 		# action = self.agent.start_episode(self.get_observation())
 		num_steps = 0
@@ -213,42 +207,62 @@ class Environment:
 			#     self.agent.end_episode(reward, terminal)
 			#     break
 
-			obs = self.get_observation()
+			self._get_screen(obs)
+			# obs = self.get_observation()
 			action, _ = self.agent.get_action(obs, 0.05, testing)
 			# action = self.agent.step(reward, self.get_observation())
 		return terminal, num_steps
 
+	def _get_screen(self, resized_frame):
+		self._resize_frame(self.merge_frame.max(axis = 0), resized_frame)
+				
+	def _resize_frame(self, src_frame, dst_frame):
+		cv2.resize(src = src_frame, dst = dst_frame,
+					dsize = (self.width, self.height),
+					interpolation = cv2.INTER_LINEAR)
 
-	def get_observation(self):
-		""" Resize and merge the previous two screen images """
+	def _open_log_files(self, agent):
+		# CREATE A FOLDER TO HOLD RESULTS
+		time_str = time.strftime("_%m-%d-%H-%M", time.localtime())
+		base_rom_name = os.path.splitext(os.path.basename(self.rom_name))[0]
+		self.log_dir = '../run_results/' + base_rom_name + time_str
+		self.network_dir = self.log_dir + '/network'
 
-		assert self.merge_id >= 2
-		index = self.merge_id % self.buffer_len - 1
-		max_image = np.maximum(self.merge_frame[index, ...],
-							   self.merge_frame[index - 1, ...])
-		return self.resize_image(max_image)
+		try:
+			os.stat(self.log_dir)
+		except OSError:
+			os.makedirs(self.log_dir)
 
-	def resize_image(self, image):
-		""" Appropriately resize a single image """
+		try:
+			os.stat(self.network_dir)
+		except OSError:
+			os.makedirs(self.network_dir)
 
-		if self.resize_method == 'crop':
-			# resize keeping aspect ratio
-			resize_height = int(round(
-				float(self.height) * self.resized_width / self.width))
+		with open(self.log_dir + '/info.txt', 'w') as f:
+			f.write('Test env + agent + net + exp\n')
+			f.write('Use Environment logging and screen buffer\n')
+			f.write('Use ale_experiment run_episode and _act\n')
+			f.write(str(agent.network.network_description + '\n\n'))
+			self._write_info(f, Environment)
+			self._write_info(f, agent.__class__)
+			self._write_info(f, agent.network.__class__)
 
-			resized = cv2.resize(image,
-								 (self.resized_width, resize_height),
-								 interpolation=cv2.INTER_LINEAR)
+		with open(self.log_dir + '/results.csv', 'w') as f:
+			f.write("epoch,episode_train,validate_values,total_train_time,steps_per_second,total_validate_time,evaluate_reward\n")
 
-			# Crop the part we want
-			crop_y_cutoff = resize_height - CROP_OFFSET - self.resized_height
-			cropped = resized[crop_y_cutoff:
-							  crop_y_cutoff + self.resized_height, :]
+	def _update_log_files(self, agent, epoch, episode, validate_values, total_train_time, total_validate_time, evaluate_values):
+		print "Updating log files"
+		with open(self.log_dir + '/results.csv', 'a') as f:
+			f.write("%d,%d,%.4f,%.0f,%.4f,%.0f,%.4f\n" % (epoch, episode, validate_values, \
+				total_train_time, Environment.STEPS_PER_EPOCH * 1.0 / max(1, total_train_time), 
+				total_validate_time, evaluate_values))
 
-			return cropped
-		elif self.resize_method == 'scale':
-			return cv2.resize(image,
-							  (self.width, self.height),
-							  interpolation=cv2.INTER_LINEAR)
-		else:
-			raise ValueError('Unrecognized image resize method.')
+		with open(self.network_dir + ('/%03d' % (epoch)) + '.pkl', 'wb') as f:
+			agent.dump(f)
+
+	def _write_info(self, f, c):
+		hyper_params = [attr for attr in dir(c) \
+			if not attr.startswith("__") and not callable(getattr(c, attr))]
+		for param in hyper_params:
+			f.write(str(c.__name__) + '.' + param + ' = ' + str(getattr(c, param)) + '\n')
+		f.write('\n')
