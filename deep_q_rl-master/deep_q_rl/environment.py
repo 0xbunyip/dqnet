@@ -7,7 +7,7 @@ from ale_python_interface import ALEInterface
 class Environment:
 	"""docstring for Environment"""
 
-	BUFFER_LENGTH = 2
+	BUFFER_LEN = 2
 	EPOCH_COUNT = 200
 	FRAMES_SKIP = 4
 	FRAME_HEIGHT = 84
@@ -27,7 +27,7 @@ class Environment:
 		self.api.loadROM('../roms/' + self.rom_name)
 		self.minimal_actions = self.api.getMinimalActionSet()
 		self.repeat = Environment.FRAMES_SKIP
-		self.buffer_len = Environment.BUFFER_LENGTH
+		self.buffer_len = Environment.BUFFER_LEN
 		self.height = Environment.FRAME_HEIGHT
 		self.width = Environment.FRAME_WIDTH
 
@@ -41,149 +41,214 @@ class Environment:
 		self.log_dir = ''
 		self.network_dir = ''
 
+		self.ale_experiment_init()
+
+	def ale_experiment_init(self):
+		# CREATE A FOLDER TO HOLD RESULTS
+		time_str = time.strftime("_%m-%d-%H-%M", time.gmtime())
+		exp_dir = 'breakout' + time_str
+
+		try:
+			os.stat(exp_dir)
+		except OSError:
+			os.makedirs(exp_dir)
+
+		self.exp_dir = exp_dir
+		with open(self.exp_dir + '/info.txt', 'w') as f:
+			f.write('Test env + agent + net + exp, use ale_experiment methods\n')
+			f.write('Keep launcher.py and Environment.__init__ the same\n')
+
+		self.results_file = open(self.exp_dir + '/results.csv', 'w', 0)
+		self.results_file.write(\
+			'epoch,num_episodes,total_reward,reward_per_epoch,mean_q\n')
+		self.results_file.flush()
+
+		self.num_epochs = Environment.EPOCH_COUNT
+		self.epoch_length = Environment.STEPS_PER_EPOCH
+		self.test_length = 100
+		self.resize_method = 'scale'
+		self.terminal_lol = False # Most recent episode ended on a loss of life
+		self.max_start_nullops = Environment.MAX_NO_OP
+		self.death_ends_episode = True
+
 	def get_action_count(self):
 		return len(self.minimal_actions)
 
 	def train(self, agent):
-		self._open_log_files(agent)
-		obs = np.zeros((self.height, self.width), dtype = np.uint8)
-		epoch_count = Environment.EPOCH_COUNT
+		"""
+		Run the desired number of training epochs, a testing epoch
+		is conducted after each training epoch.
+		"""
+		self.agent = agent
+		for epoch in range(1, self.num_epochs + 1):
+			self.run_epoch(epoch, self.epoch_length)
 
-		for epoch in xrange(epoch_count):
-			steps_left = Environment.STEPS_PER_EPOCH
+			with open(self.exp_dir + '/network_file_' + str(epoch) + \
+						'.pkl', 'wb') as f:
+				self.agent.dump(f)
+			# self.agent.finish_epoch(epoch)
 
-			print "\n" + "=" * 50
-			print "Epoch #%d" % (epoch + 1)
-			episode = 0
-			train_start = time.time()
-			while steps_left > 0:
-				num_step, _ = self._run_episode(agent, steps_left, obs)
-				steps_left -= num_step
-				episode += 1
-				if steps_left == 0 or episode % 10 == 0:
-					print "Finished episode #%d, steps_left = %d" % (episode, steps_left)
-			train_end = time.time()
+			if self.test_length > 0:
+				# self.agent.start_testing()
+				self.total_reward = 0
+				self.episode_counter = 0
+				self.run_epoch(epoch, self.test_length, True)
 
-			avg_validate_values = agent.get_validate_values()
-			eval_values = self.evaluate(agent)
-			test_end = time.time()
+				holdout_sum = self.agent.get_validate_values()
+				out = "{},{},{},{},{}\n".format(epoch, self.episode_counter, 
+					self.total_reward, self.total_reward / float(self.episode_counter),
+					holdout_sum)
+				self.results_file.write(out)
+				self.results_file.flush()
+				# self.agent.finish_testing(epoch)
 
-			train_time = train_end - train_start
-			test_time = test_end - train_end
-			print "Finished epoch #%d, episode trained = %d, validate values = %.3f, train time = %.0fs, test time = %.0fs, evaluate reward = %.3f" \
-					% (epoch + 1, episode, avg_validate_values, train_time, test_time, eval_values)
-			self._update_log_files(agent, epoch + 1, episode, avg_validate_values, train_time, test_time, eval_values)
-		print "Number of frame seen:", agent.num_train_obs
+	def run_epoch(self, epoch, num_steps, testing=False):
+		""" Run one 'epoch' of training or testing, where an epoch is defined
+		by the number of steps executed.  Prints a progress report after
+		every trial
 
-	def evaluate(self, agent, num_eval_episode = 30, eps = 0.05, obs = None):
-		print "\n***Start evaluating"
-		if obs is None:
-			obs = np.zeros((self.height, self.width), dtype = np.uint8)
-		sum_reward = 0.0
-		sum_step = 0.0
-		for episode in xrange(num_eval_episode):
-			step, reward = self._run_episode(agent, Environment.STEPS_PER_EPISODE, obs, eps, evaluating = True)
-			sum_reward += reward
-			sum_step += step
-			print "Finished episode %d, reward = %d, step = %d" % (episode + 1, reward, step)
-		print "Average reward per episode = %.4f" % (sum_reward / num_eval_episode)
-		print "Average step per episode = %.4f" % (sum_step / num_eval_episode)
-		return sum_reward / num_eval_episode
+		Arguments:
+		epoch - the current epoch number
+		num_steps - steps per epoch
+		testing - True if this Epoch is used for testing and not training
 
-	def _run_episode(self, agent, steps_left, obs, eps = 0.0, evaluating = False):
-		self.api.reset_game()
-		if Environment.MAX_NO_OP > 0:
-			num_no_op = self.rng.randint(Environment.MAX_NO_OP) + 1
-			# print "Number of no-op = %d" % (num_no_op)
-			for _ in xrange(num_no_op):
-				self.api.act(0)
+		"""
+		self.terminal_lol = False # Make sure each epoch starts with a reset.
+		steps_left = num_steps
+		while steps_left > 0:
+			prefix = "testing" if testing else "training"
+			print prefix + " epoch: " + str(epoch) + " steps_left: " + str(steps_left)
+			_, num_steps = self.run_episode(steps_left, testing)
 
-		starting_lives = self.api.lives()
-		step_count = 0
-		sum_reward = 0
+			if testing:
+				self.episode_counter += 1
+				self.total_reward += self.episode_reward
 
-		for _ in xrange(self.buffer_len):
-			self._update_buffer()
+			steps_left -= num_steps
 
-		is_terminal = self.api.game_over() or (self.api.lives() < starting_lives)
-		while step_count < steps_left and not is_terminal:
-			self._get_screen(obs)
-			action_id, _ = agent.get_action(obs, eps, evaluating)
-			
-			reward = self._repeat_action(self.minimal_actions[action_id])
-			reward_clip = reward
-			if not evaluating and self.max_reward > 0:
-				reward_clip = np.clip(reward, -self.max_reward, self.max_reward)
 
-			life_lost = (not evaluating) and (self.api.lives() < starting_lives)
-			is_terminal = self.api.game_over() or life_lost or (step_count + 1 >= steps_left)
-			agent.add_experience(obs, is_terminal, action_id, reward_clip, evaluating)
-			sum_reward += reward
-			step_count += 1
-			
-		return step_count, sum_reward
+	def _init_episode(self):
+		""" This method resets the game if needed, performs enough null
+		actions to ensure that the screen buffer is ready and optionally
+		performs a randomly determined number of null action to randomize
+		the initial game state."""
 
-	def _update_buffer(self):
-		self.api.getScreenGrayscale(self.merge_frame[self.merge_id, ...])
-		# print self.api.getEpisodeFrameNumber()
-		self.merge_id = (self.merge_id + 1) % self.buffer_len
+		if not self.terminal_lol or self.api.game_over():
+			self.api.reset_game()
 
-	def _repeat_action(self, action):
-		reward = 0
-		for i in xrange(self.repeat):
-			reward += self.api.act(action)
-			if i + self.buffer_len >= self.repeat:
-				self._update_buffer()
+			if self.max_start_nullops > 0:
+				random_actions = self.rng.randint(0, self.max_start_nullops+1)
+				for _ in range(random_actions):
+					self._act(0) # Null action
+
+		# Make sure the screen buffer is filled at the beginning of
+		# each episode...
+		self._act(0)
+		self._act(0)
+
+
+	def _act(self, action):
+		"""Perform the indicated action for a single frame, return the
+		resulting reward and store the resulting screen image in the
+		buffer
+
+		"""
+		reward = self.api.act(action)
+		index = self.merge_id % self.buffer_len
+
+		self.api.getScreenGrayscale(self.merge_frame[index, ...])
+
+		self.merge_id += 1
 		return reward
 
-	def _get_screen(self, resized_frame):
-		self._resize_frame(self.merge_frame.max(axis = 0), resized_frame)
-				
-	def _resize_frame(self, src_frame, dst_frame):
-		cv2.resize(src = src_frame, dst = dst_frame,
-					dsize = (self.width, self.height),
-					interpolation = cv2.INTER_LINEAR)
+	def _step(self, action):
+		""" Repeat one action the appopriate number of times and return
+		the summed reward. """
+		reward = 0
+		for _ in range(self.repeat):
+			reward += self._act(action)
 
-	def _open_log_files(self, agent):
-		# CREATE A FOLDER TO HOLD RESULTS
-		time_str = time.strftime("_%m-%d-%H-%M", time.localtime())
-		base_rom_name = os.path.splitext(os.path.basename(self.rom_name))[0]
-		self.log_dir = '../run_results/' + base_rom_name + time_str
-		self.network_dir = self.log_dir + '/network'
+		return reward
 
-		try:
-			os.stat(self.log_dir)
-		except OSError:
-			os.makedirs(self.log_dir)
+	def run_episode(self, max_steps, testing):
+		"""Run a single training episode.
 
-		try:
-			os.stat(self.network_dir)
-		except OSError:
-			os.makedirs(self.network_dir)
+		The boolean terminal value returned indicates whether the
+		episode ended because the game ended or the agent died (True)
+		or because the maximum number of steps was reached (False).
+		Currently this value will be ignored.
 
-		with open(self.log_dir + '/info.txt', 'w') as f:
-			f.write('Test default env + agent + net + exp\n')
-			f.write(str(agent.network.network_description + '\n\n'))
-			self._write_info(f, Environment)
-			self._write_info(f, agent.__class__)
-			self._write_info(f, agent.network.__class__)
+		Return: (terminal, num_steps)
 
-		with open(self.log_dir + '/results.csv', 'w') as f:
-			f.write("epoch,episode_train,validate_values,total_train_time,steps_per_second,total_validate_time,evaluate_reward\n")
+		"""
 
-	def _update_log_files(self, agent, epoch, episode, validate_values, total_train_time, total_validate_time, evaluate_values):
-		print "Updating log files"
-		with open(self.log_dir + '/results.csv', 'a') as f:
-			f.write("%d,%d,%.4f,%.0f,%.4f,%.0f,%.4f\n" % (epoch, episode, validate_values, \
-				total_train_time, Environment.STEPS_PER_EPOCH * 1.0 / max(1, total_train_time), 
-				total_validate_time, evaluate_values))
+		self._init_episode()
+		self.episode_reward = 0
 
-		with open(self.network_dir + ('/%03d' % (epoch)) + '.pkl', 'wb') as f:
-			agent.dump(f)
+		start_lives = self.api.lives()
 
-	def _write_info(self, f, c):
-		hyper_params = [attr for attr in dir(c) \
-			if not attr.startswith("__") and not callable(getattr(c, attr))]
-		for param in hyper_params:
-			f.write(str(c.__name__) + '.' + param + ' = ' + str(getattr(c, param)) + '\n')
-		f.write('\n')
+		obs = self.get_observation()
+		action, _ = self.agent.get_action(obs, 0.05, testing)
+		# action = self.agent.start_episode(self.get_observation())
+		num_steps = 0
+		while True:
+			reward = self._step(self.minimal_actions[action])
+			self.episode_reward += reward
+			reward = np.clip(reward, -1, 1)
+			# reward = self._step(self.min_action_set[action])
+
+			self.terminal_lol = (self.death_ends_episode and not testing and
+								 self.api.lives() < start_lives)
+			terminal = self.api.game_over() or self.terminal_lol
+			num_steps += 1
+
+			if terminal or num_steps >= max_steps:
+				# self.agent.end_episode(reward, terminal)
+				self.agent.add_experience(obs, True, action, reward, testing)
+				break
+			else:
+				self.agent.add_experience(obs, False, action, reward, testing)
+
+			# if terminal or num_steps >= max_steps:
+			#     self.agent.end_episode(reward, terminal)
+			#     break
+
+			obs = self.get_observation()
+			action, _ = self.agent.get_action(obs, 0.05, testing)
+			# action = self.agent.step(reward, self.get_observation())
+		return terminal, num_steps
+
+
+	def get_observation(self):
+		""" Resize and merge the previous two screen images """
+
+		assert self.merge_id >= 2
+		index = self.merge_id % self.buffer_len - 1
+		max_image = np.maximum(self.merge_frame[index, ...],
+							   self.merge_frame[index - 1, ...])
+		return self.resize_image(max_image)
+
+	def resize_image(self, image):
+		""" Appropriately resize a single image """
+
+		if self.resize_method == 'crop':
+			# resize keeping aspect ratio
+			resize_height = int(round(
+				float(self.height) * self.resized_width / self.width))
+
+			resized = cv2.resize(image,
+								 (self.resized_width, resize_height),
+								 interpolation=cv2.INTER_LINEAR)
+
+			# Crop the part we want
+			crop_y_cutoff = resize_height - CROP_OFFSET - self.resized_height
+			cropped = resized[crop_y_cutoff:
+							  crop_y_cutoff + self.resized_height, :]
+
+			return cropped
+		elif self.resize_method == 'scale':
+			return cv2.resize(image,
+							  (self.width, self.height),
+							  interpolation=cv2.INTER_LINEAR)
+		else:
+			raise ValueError('Unrecognized image resize method.')
