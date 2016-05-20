@@ -118,7 +118,6 @@ class Environment:
 			steps_left -= num_steps
 		return episode, reward
 
-
 	def _init_episode(self):
 		""" This method resets the game if needed, performs enough null
 		actions to ensure that the screen buffer is ready and optionally
@@ -131,36 +130,15 @@ class Environment:
 			if self.max_start_nullops > 0:
 				random_actions = self.rng.randint(0, self.max_start_nullops+1)
 				for _ in range(random_actions):
-					self._act(0) # Null action
+					self.api.act(0) # Null action
+					self._update_buffer()
 
 		# Make sure the screen buffer is filled at the beginning of
 		# each episode...
-		self._act(0)
-		self._act(0)
-
-
-	def _act(self, action):
-		"""Perform the indicated action for a single frame, return the
-		resulting reward and store the resulting screen image in the
-		buffer
-
-		"""
-		reward = self.api.act(action)
-		index = self.merge_id % self.buffer_len
-
-		self.api.getScreenGrayscale(self.merge_frame[index, ...])
-
-		self.merge_id += 1
-		return reward
-
-	def _step(self, action):
-		""" Repeat one action the appopriate number of times and return
-		the summed reward. """
-		reward = 0
-		for _ in range(self.repeat):
-			reward += self._act(action)
-
-		return reward
+		self.api.act(0)
+		self._update_buffer()
+		self.api.act(0)
+		self._update_buffer()
 
 	def run_episode(self, max_steps, testing):
 		"""Run a single training episode.
@@ -186,7 +164,7 @@ class Environment:
 		# action = self.agent.start_episode(self.get_observation())
 		num_steps = 0
 		while True:
-			reward = self._step(self.minimal_actions[action])
+			reward = self._repeat_action(self.minimal_actions[action])
 			self.episode_reward += reward
 			reward = np.clip(reward, -1, 1)
 			# reward = self._step(self.min_action_set[action])
@@ -212,6 +190,19 @@ class Environment:
 			action, _ = self.agent.get_action(obs, 0.05, testing)
 			# action = self.agent.step(reward, self.get_observation())
 		return terminal, num_steps
+
+	def _update_buffer(self):
+		self.api.getScreenGrayscale(self.merge_frame[self.merge_id, ...])
+		# print self.api.getEpisodeFrameNumber()
+		self.merge_id = (self.merge_id + 1) % self.buffer_len
+
+	def _repeat_action(self, action):
+		reward = 0
+		for i in xrange(self.repeat):
+			reward += self.api.act(action)
+			if i + self.buffer_len >= self.repeat:
+				self._update_buffer()
+		return reward
 
 	def _get_screen(self, resized_frame):
 		self._resize_frame(self.merge_frame.max(axis = 0), resized_frame)
@@ -240,8 +231,8 @@ class Environment:
 
 		with open(self.log_dir + '/info.txt', 'w') as f:
 			f.write('Test env + agent + net + exp\n')
-			f.write('Use Environment logging and screen buffer\n')
-			f.write('Use ale_experiment run_episode and _act\n')
+			f.write('Use Environment logging, screen buffer and repeat_action\n')
+			f.write('Use ale_experiment run_episode and run_epoch\n')
 			f.write(str(agent.network.network_description + '\n\n'))
 			self._write_info(f, Environment)
 			self._write_info(f, agent.__class__)
