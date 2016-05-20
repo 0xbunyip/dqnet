@@ -44,10 +44,6 @@ class Environment:
 		self.ale_experiment_init()
 
 	def ale_experiment_init(self):
-		self.num_epochs = Environment.EPOCH_COUNT
-		self.epoch_length = Environment.STEPS_PER_EPOCH
-		self.test_length = 125000
-		self.resize_method = 'scale'
 		self.terminal_lol = False # Most recent episode ended on a loss of life
 		self.max_start_nullops = Environment.MAX_NO_OP
 		self.death_ends_episode = True
@@ -56,67 +52,58 @@ class Environment:
 		return len(self.minimal_actions)
 
 	def train(self, agent):
-		"""
-		Run the desired number of training epochs, a testing epoch
-		is conducted after each training epoch.
-		"""
-		self._open_log_files(agent)
 		self.agent = agent
-		for epoch in range(1, self.num_epochs + 1):
+		self._open_log_files(agent)
+		obs = np.zeros((self.height, self.width), dtype = np.uint8)
+		epoch_count = Environment.EPOCH_COUNT
+
+		for epoch in xrange(epoch_count):
+			self.terminal_lol = False
+			steps_left = Environment.STEPS_PER_EPOCH
+
+			print "\n" + "=" * 50
+			print "Epoch #%d" % (epoch + 1)
+			episode = 0
 			train_start = time.time()
-			train_episode, _ = self.run_epoch(epoch, self.epoch_length)
-			train_stop = time.time()
+			while steps_left > 0:
+				_, num_step = self.run_episode(steps_left, False)
+				# num_step, _ = self._run_episode(agent, steps_left, obs)
+				steps_left -= num_step
+				episode += 1
+				if steps_left == 0 or episode % 10 == 0:
+					print "Finished episode #%d, steps_left = %d" % (episode, steps_left)
+			train_end = time.time()
 
-			# with open(self.exp_dir + '/network_file_' + str(epoch) + \
-			# 			'.pkl', 'wb') as f:
-			# 	self.agent.dump(f)
-			# self.agent.finish_epoch(epoch)
+			avg_validate_values = agent.get_validate_values()
+			eval_values = self.evaluate(agent)
+			test_end = time.time()
 
-			test_reward = 0
-			if self.test_length > 0:
-				# self.agent.start_testing()
-				test_episode, test_reward = self.run_epoch(epoch, self.test_length, True)
-				test_stop = time.time()
+			train_time = train_end - train_start
+			test_time = test_end - train_end
+			print "Finished epoch #%d, episode trained = %d, validate values = %.3f, train time = %.0fs, test time = %.0fs, evaluate reward = %.3f" \
+					% (epoch + 1, episode, avg_validate_values, train_time, test_time, eval_values)
+			self._update_log_files(agent, epoch + 1, episode, avg_validate_values, train_time, test_time, eval_values)
+		print "Number of frame seen:", agent.num_train_obs
 
-				holdout_sum = self.agent.get_validate_values()
-				test_reward /= float(test_episode)
-				# out = "{},{},{},{},{}\n".format(epoch, self.episode_counter, 
-				# 	self.total_reward, self.total_reward / float(self.episode_counter),
-				# 	holdout_sum)
-				# self.results_file.write(out)
-				# self.results_file.flush()
-				# self.agent.finish_testing(epoch)
-
-			train_time = train_stop - train_start
-			test_time = test_stop - train_stop
-			self._update_log_files(agent, epoch, train_episode, \
-				holdout_sum, train_time, test_time, test_reward)
-
-	def run_epoch(self, epoch, num_steps, testing=False):
-		""" Run one 'epoch' of training or testing, where an epoch is defined
-		by the number of steps executed.  Prints a progress report after
-		every trial
-
-		Arguments:
-		epoch - the current epoch number
-		num_steps - steps per epoch
-		testing - True if this Epoch is used for testing and not training
-
-		"""
-		self.terminal_lol = False # Make sure each epoch starts with a reset.
-		steps_left = num_steps
-		episode = 0
-		reward = 0
-		while steps_left > 0:
-			prefix = "testing" if testing else "training"
-			print prefix + " epoch: " + str(epoch) + " steps_left: " + str(steps_left)
-			_, num_steps = self.run_episode(steps_left, testing)
-
-			episode += 1
-			reward += self.episode_reward
-
-			steps_left -= num_steps
-		return episode, reward
+	def evaluate(self, agent, num_eval_episode = 30, eps = 0.05, obs = None):
+		self.agent = agent
+		print "\n***Start evaluating"
+		if obs is None:
+			obs = np.zeros((self.height, self.width), dtype = np.uint8)
+		sum_reward = 0.0
+		sum_step = 0.0
+		for episode in xrange(num_eval_episode):
+			self.terminal_lol = False
+			_, step = self.run_episode(Environment.STEPS_PER_EPISODE, True)
+			# step, reward = self._run_episode(agent, \
+			# 	Environment.STEPS_PER_EPISODE, obs, eps, evaluating = True)
+			sum_reward += self.episode_reward
+			sum_step += step
+			print "Finished episode %d, reward = %d, step = %d" % (episode + 1, self.episode_reward, step)
+			# print "Finished episode %d, reward = %d, step = %d" % (episode + 1, reward, step)
+		print "Average reward per episode = %.4f" % (sum_reward / num_eval_episode)
+		print "Average step per episode = %.4f" % (sum_step / num_eval_episode)
+		return sum_reward / num_eval_episode
 
 	def _init_episode(self):
 		""" This method resets the game if needed, performs enough null
@@ -231,8 +218,8 @@ class Environment:
 
 		with open(self.log_dir + '/info.txt', 'w') as f:
 			f.write('Test env + agent + net + exp\n')
-			f.write('Use Environment logging, screen buffer and repeat_action\n')
-			f.write('Use ale_experiment run_episode and run_epoch\n')
+			f.write('Use Environment logging, screen buffer, repeat_action and train/evaluate\n')
+			f.write('Use ale_experiment run_episode and _init_episode\n')
 			f.write(str(agent.network.network_description + '\n\n'))
 			self._write_info(f, Environment)
 			self._write_info(f, agent.__class__)
