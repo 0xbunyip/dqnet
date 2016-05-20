@@ -14,27 +14,27 @@ class Environment:
 	FRAME_WIDTH = 84
 	MAX_NO_OP = 30
 	MAX_REWARD = 1
-	ORIGINAL_HEIGHT = 210
-	ORIGINAL_WIDTH = 160
 	STEPS_PER_EPISODE = 18000
 	STEPS_PER_EPOCH = 50000
 
 	def __init__(self, rom_name, rng, display_screen = False):
 		self.api = ALEInterface()
-		self.api.setInt('random_seed', 123)
+		self.api.setInt('random_seed', rng.randint(333))
 		self.api.setBool('display_screen', display_screen)
+		self.api.setFloat('repeat_action_probability', 0.0)
 		self.rom_name = rom_name
 		self.rng = rng
 		self.api.loadROM('../roms/' + self.rom_name)
 		self.minimal_actions = self.api.getMinimalActionSet()
-		self.api.setFloat('repeat_action_probability', 0.0)
 		self.repeat = Environment.FRAMES_SKIP
 		self.buffer_len = Environment.BUFFER_LENGTH
 		self.height = Environment.FRAME_HEIGHT
 		self.width = Environment.FRAME_WIDTH
+
+		original_width, original_height = self.api.getScreenDims()
 		self.merge_frame = np.zeros((self.buffer_len
-								, Environment.ORIGINAL_HEIGHT
-								, Environment.ORIGINAL_WIDTH)
+								, original_height
+								, original_width)
 								, dtype = np.uint8)
 		self.merge_id = 0
 		self.max_reward = Environment.MAX_REWARD

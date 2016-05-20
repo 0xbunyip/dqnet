@@ -236,8 +236,15 @@ def launch(args, defaults, description):
     #               parameters.update_frequency,
     #               rng)
 
+    Environment.BUFFER_LENGTH = 2
     Environment.EPOCH_COUNT = parameters.epochs
-    Environment.STEPS_PER_EPOCH =  parameters.steps_per_epoch
+    Environment.FRAMES_SKIP = parameters.frame_skip
+    Environment.FRAME_HEIGHT = defaults.RESIZED_HEIGHT
+    Environment.FRAME_WIDTH = defaults.RESIZED_WIDTH
+    Environment.MAX_NO_OP = parameters.max_start_nullops
+    Environment.MAX_REWARD = 1
+    Environment.STEPS_PER_EPISODE = 18000
+    Environment.STEPS_PER_EPOCH = parameters.steps_per_epoch
     experiment = Environment(parameters.rom,
                             rng,
                             parameters.display_screen)
@@ -254,17 +261,31 @@ def launch(args, defaults, description):
     #                                               rng,
     #                                               parameters.experiment_prefix)
 
-    Network.MAX_ERROR = 1.0
-    Agent.DISCOUNT_FACTOR = 0.99
-    Agent.VALIDATION_SET_SIZE = 3200
+    Network.GRAD_MOMENTUM = parameters.rms_decay
+    Network.LEARNING_RATE = parameters.learning_rate
+    Network.MAX_ERROR = parameters.clip_delta
+    Network.MIN_SQR_GRAD = parameters.rms_epsilon
+    Network.SCALE_FACTOR = 255.0
+    Network.SQR_GRAD_MOMENTUM = parameters.rms_decay
+    Network.TARGET_NETWORK_UPDATE_FREQUENCY = parameters.freeze_interval * \
+                                            parameters.update_frequency
+
+    Agent.AGENT_HISTORY_LENGTH = parameters.phi_length
+    Agent.DISCOUNT_FACTOR = parameters.discount
+    Agent.FINAL_EXPLORATION = parameters.epsilon_min
+    Agent.FINAL_EXPLORATION_FRAME = parameters.epsilon_decay
+    Agent.INITIAL_EXPLORATION = parameters.epsilon_start
+    Agent.MINIBATCH_SIZE = parameters.batch_size
+    Agent.REPLAY_MEMORY_SIZE = parameters.replay_memory_size
     Agent.REPLAY_START_SIZE = parameters.replay_start_size
+    Agent.UPDATE_FREQUENCY = parameters.update_frequency
+    Agent.VALIDATION_SET_SIZE = 3200
     agent = Agent(experiment.get_action_count(),
                   defaults.RESIZED_HEIGHT,
                   defaults.RESIZED_WIDTH,
                   rng,
                   'nature',
                   parameters.nn_file)
-
 
     # experiment.run()
     experiment.train(agent)
