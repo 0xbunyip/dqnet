@@ -105,28 +105,6 @@ class Environment:
 		print "Average step per episode = %.4f" % (sum_step / num_eval_episode)
 		return sum_reward / num_eval_episode
 
-	def _init_episode(self):
-		""" This method resets the game if needed, performs enough null
-		actions to ensure that the screen buffer is ready and optionally
-		performs a randomly determined number of null action to randomize
-		the initial game state."""
-
-		if not self.terminal_lol or self.api.game_over():
-			self.api.reset_game()
-
-			if self.max_start_nullops > 0:
-				random_actions = self.rng.randint(0, self.max_start_nullops+1)
-				for _ in range(random_actions):
-					self.api.act(0) # Null action
-					self._update_buffer()
-
-		# Make sure the screen buffer is filled at the beginning of
-		# each episode...
-		self.api.act(0)
-		self._update_buffer()
-		self.api.act(0)
-		self._update_buffer()
-
 	def run_episode(self, max_steps, testing):
 		"""Run a single training episode.
 
@@ -139,7 +117,15 @@ class Environment:
 
 		"""
 
-		self._init_episode()
+		self.api.reset_game()
+		if Environment.MAX_NO_OP > 0:
+			num_no_op = self.rng.randint(Environment.MAX_NO_OP) + self.buffer_len
+			# print "Number of no-op = %d" % (num_no_op)
+			for _ in xrange(num_no_op):
+				self.api.act(0)
+
+		for _ in xrange(self.buffer_len):
+			self._update_buffer()
 		self.episode_reward = 0
 
 		start_lives = self.api.lives()
