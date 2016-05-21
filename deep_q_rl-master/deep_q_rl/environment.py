@@ -57,6 +57,7 @@ class Environment:
 			episode = 0
 			train_start = time.time()
 			while steps_left > 0:
+				self.life_lost = False
 				num_step, _ = self._run_episode(agent, steps_left, obs)
 				steps_left -= num_step
 				episode += 1
@@ -64,7 +65,8 @@ class Environment:
 					print "Finished episode #%d, steps_left = %d" % (episode, steps_left)
 			train_end = time.time()
 
-			avg_validate_values = agent.get_validate_values()
+			avg_validate_values = 0
+			# avg_validate_values = agent.get_validate_values()
 			eval_values = self.evaluate(agent)
 			test_end = time.time()
 
@@ -82,6 +84,7 @@ class Environment:
 		sum_reward = 0.0
 		sum_step = 0.0
 		for episode in xrange(num_eval_episode):
+			self.life_lost = False
 			step, reward = self._run_episode(agent, \
 				Environment.STEPS_PER_EPISODE, obs, eps, evaluating = True)
 			sum_reward += reward
@@ -92,12 +95,12 @@ class Environment:
 		return sum_reward / num_eval_episode
 
 	def _run_episode(self, agent, steps_left, obs, eps = 0.0, evaluating = False):
-		self.api.reset_game()
-		if Environment.MAX_NO_OP > 0:
-			num_no_op = self.rng.randint(Environment.MAX_NO_OP) + self.buffer_len
-			# print "Number of no-op = %d" % (num_no_op)
-			for _ in xrange(num_no_op):
-				self.api.act(0)
+		if not self.life_lost or self.api.game_over():
+			self.api.reset_game()
+			if Environment.MAX_NO_OP > 0:
+				num_no_op = self.rng.randint(Environment.MAX_NO_OP + 1) + self.buffer_len
+				for _ in xrange(num_no_op):
+					self.api.act(0)
 
 		for _ in xrange(self.buffer_len):
 			self._update_buffer()
@@ -106,7 +109,7 @@ class Environment:
 		step_count = 0
 		sum_reward = 0
 		is_terminal = False
-		while step_count < steps_left and (not is_terminal):
+		while step_count < steps_left and not is_terminal:
 			self._get_screen(obs)
 			action_id, _ = agent.get_action(obs, eps, evaluating)
 			
@@ -115,8 +118,8 @@ class Environment:
 			if self.max_reward > 0:
 				reward_clip = np.clip(reward, -self.max_reward, self.max_reward)
 
-			life_lost = (not evaluating) and (self.api.lives() < start_lives)
-			is_terminal = self.api.game_over() or life_lost or (step_count + 1 >= steps_left)
+			self.life_lost = not evaluating and self.api.lives() < start_lives
+			is_terminal = self.api.game_over() or self.life_lost or step_count + 1 >= steps_left
 			agent.add_experience(obs, is_terminal, action_id, reward_clip, evaluating)
 			sum_reward += reward
 			step_count += 1
@@ -163,7 +166,7 @@ class Environment:
 
 		with open(self.log_dir + '/info.txt', 'w') as f:
 			f.write('Test env + agent + net + exp\n')
-			f.write('Use all Environment methods and always clip reward\n')
+			f.write('Only reset game if not life_lost\n')
 			f.write(str(agent.network.network_description + '\n\n'))
 			self._write_info(f, Environment)
 			self._write_info(f, agent.__class__)
