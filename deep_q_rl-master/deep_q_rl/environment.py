@@ -41,24 +41,15 @@ class Environment:
 		self.log_dir = ''
 		self.network_dir = ''
 
-		self.ale_experiment_init()
-
-	def ale_experiment_init(self):
-		self.terminal_lol = False # Most recent episode ended on a loss of life
-		self.max_start_nullops = Environment.MAX_NO_OP
-		self.death_ends_episode = True
-
 	def get_action_count(self):
 		return len(self.minimal_actions)
 
 	def train(self, agent):
-		self.agent = agent
 		self._open_log_files(agent)
 		obs = np.zeros((self.height, self.width), dtype = np.uint8)
 		epoch_count = Environment.EPOCH_COUNT
 
 		for epoch in xrange(epoch_count):
-			self.terminal_lol = False
 			steps_left = Environment.STEPS_PER_EPOCH
 
 			print "\n" + "=" * 50
@@ -66,8 +57,7 @@ class Environment:
 			episode = 0
 			train_start = time.time()
 			while steps_left > 0:
-				_, num_step = self.run_episode(steps_left, False)
-				# num_step, _ = self._run_episode(agent, steps_left, obs)
+				num_step, _ = self._run_episode(agent, steps_left, obs)
 				steps_left -= num_step
 				episode += 1
 				if steps_left == 0 or episode % 10 == 0:
@@ -86,37 +76,22 @@ class Environment:
 		print "Number of frame seen:", agent.num_train_obs
 
 	def evaluate(self, agent, num_eval_episode = 30, eps = 0.05, obs = None):
-		self.agent = agent
 		print "\n***Start evaluating"
 		if obs is None:
 			obs = np.zeros((self.height, self.width), dtype = np.uint8)
 		sum_reward = 0.0
 		sum_step = 0.0
 		for episode in xrange(num_eval_episode):
-			self.terminal_lol = False
-			_, step = self.run_episode(Environment.STEPS_PER_EPISODE, True)
-			# step, reward = self._run_episode(agent, \
-			# 	Environment.STEPS_PER_EPISODE, obs, eps, evaluating = True)
-			sum_reward += self.episode_reward
+			step, reward = self._run_episode(agent, \
+				Environment.STEPS_PER_EPISODE, obs, eps, evaluating = True)
+			sum_reward += reward
 			sum_step += step
-			print "Finished episode %d, reward = %d, step = %d" % (episode + 1, self.episode_reward, step)
-			# print "Finished episode %d, reward = %d, step = %d" % (episode + 1, reward, step)
+			print "Finished episode %d, reward = %d, step = %d" % (episode + 1, reward, step)
 		print "Average reward per episode = %.4f" % (sum_reward / num_eval_episode)
 		print "Average step per episode = %.4f" % (sum_step / num_eval_episode)
 		return sum_reward / num_eval_episode
 
-	def run_episode(self, max_steps, testing):
-		"""Run a single training episode.
-
-		The boolean terminal value returned indicates whether the
-		episode ended because the game ended or the agent died (True)
-		or because the maximum number of steps was reached (False).
-		Currently this value will be ignored.
-
-		Return: (terminal, num_steps)
-
-		"""
-
+	def _run_episode(self, agent, steps_left, obs, eps = 0.0, evaluating = False):
 		self.api.reset_game()
 		if Environment.MAX_NO_OP > 0:
 			num_no_op = self.rng.randint(Environment.MAX_NO_OP) + self.buffer_len
@@ -126,43 +101,27 @@ class Environment:
 
 		for _ in xrange(self.buffer_len):
 			self._update_buffer()
-		self.episode_reward = 0
 
 		start_lives = self.api.lives()
-
-		obs = np.zeros((self.height, self.width), dtype = np.uint8)
-		self._get_screen(obs)
-		# obs = self.get_observation()
-		action, _ = self.agent.get_action(obs, 0.05, testing)
-		# action = self.agent.start_episode(self.get_observation())
-		num_steps = 0
-		while True:
-			reward = self._repeat_action(self.minimal_actions[action])
-			self.episode_reward += reward
-			reward = np.clip(reward, -1, 1)
-			# reward = self._step(self.min_action_set[action])
-
-			self.terminal_lol = (self.death_ends_episode and not testing and
-								 self.api.lives() < start_lives)
-			terminal = self.api.game_over() or self.terminal_lol
-			num_steps += 1
-
-			if terminal or num_steps >= max_steps:
-				# self.agent.end_episode(reward, terminal)
-				self.agent.add_experience(obs, True, action, reward, testing)
-				break
-			else:
-				self.agent.add_experience(obs, False, action, reward, testing)
-
-			# if terminal or num_steps >= max_steps:
-			#     self.agent.end_episode(reward, terminal)
-			#     break
-
+		step_count = 0
+		sum_reward = 0
+		is_terminal = False
+		while step_count < steps_left and (not is_terminal):
 			self._get_screen(obs)
-			# obs = self.get_observation()
-			action, _ = self.agent.get_action(obs, 0.05, testing)
-			# action = self.agent.step(reward, self.get_observation())
-		return terminal, num_steps
+			action_id, _ = agent.get_action(obs, eps, evaluating)
+			
+			reward = self._repeat_action(self.minimal_actions[action_id])
+			reward_clip = reward
+			if self.max_reward > 0:
+				reward_clip = np.clip(reward, -self.max_reward, self.max_reward)
+
+			life_lost = (not evaluating) and (self.api.lives() < start_lives)
+			is_terminal = self.api.game_over() or life_lost or (step_count + 1 >= steps_left)
+			agent.add_experience(obs, is_terminal, action_id, reward_clip, evaluating)
+			sum_reward += reward
+			step_count += 1
+			
+		return step_count, sum_reward
 
 	def _update_buffer(self):
 		self.api.getScreenGrayscale(self.merge_frame[self.merge_id, ...])
@@ -204,8 +163,7 @@ class Environment:
 
 		with open(self.log_dir + '/info.txt', 'w') as f:
 			f.write('Test env + agent + net + exp\n')
-			f.write('Use Environment logging, screen buffer, repeat_action and train/evaluate\n')
-			f.write('Use ale_experiment run_episode and _init_episode\n')
+			f.write('Use all Environment methods and always clip reward\n')
 			f.write(str(agent.network.network_description + '\n\n'))
 			self._write_info(f, Environment)
 			self._write_info(f, agent.__class__)
