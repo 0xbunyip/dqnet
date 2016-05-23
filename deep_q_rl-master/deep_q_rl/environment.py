@@ -49,6 +49,7 @@ class Environment:
 		obs = np.zeros((self.height, self.width), dtype = np.uint8)
 		epoch_count = Environment.EPOCH_COUNT
 
+		self.need_reset = True
 		for epoch in xrange(epoch_count):
 			steps_left = Environment.STEPS_PER_EPOCH
 
@@ -57,7 +58,6 @@ class Environment:
 			episode = 0
 			train_start = time.time()
 			while steps_left > 0:
-				self.life_lost = False
 				num_step, _ = self._run_episode(agent, steps_left, obs)
 				steps_left -= num_step
 				episode += 1
@@ -65,17 +65,21 @@ class Environment:
 					print "Finished episode #%d, steps_left = %d" % (episode, steps_left)
 			train_end = time.time()
 
-			avg_validate_values = 0
-			# avg_validate_values = agent.get_validate_values()
+			valid_values = agent.get_validate_values()
 			eval_values = self.evaluate(agent)
 			test_end = time.time()
 
 			train_time = train_end - train_start
 			test_time = test_end - train_end
-			print "Finished epoch #%d, episode trained = %d, validate values = %.3f, train time = %.0fs, test time = %.0fs, evaluate reward = %.3f" \
-					% (epoch + 1, episode, avg_validate_values, train_time, test_time, eval_values)
-			self._update_log_files(agent, epoch + 1, episode, avg_validate_values, train_time, test_time, eval_values)
-		print "Number of frame seen:", agent.num_train_obs
+			step_per_sec = Environment.STEPS_PER_EPOCH * 1. / max(1, train_time)
+			print "\tFinished epoch #%d, episode trained = %d\n" \
+				"\tValidate values = %.3f, evaluate reward = %.3f\n"\
+				"\tTrain time = %.0fs, test time = %.0fs, steps/sec = %.4f" \
+					% (epoch + 1, episode, valid_values, eval_values\
+						, train_time, test_time, step_per_sec)
+			self._update_log_files(agent, epoch + 1, episode
+								, valid_values, eval_values
+								, train_time, test_time, step_per_sec)
 
 	def evaluate(self, agent, num_eval_episode = 30, eps = 0.05, obs = None):
 		print "\n***Start evaluating"
@@ -83,20 +87,22 @@ class Environment:
 			obs = np.zeros((self.height, self.width), dtype = np.uint8)
 		sum_reward = 0.0
 		sum_step = 0.0
+		self.need_reset = True
 		for episode in xrange(num_eval_episode):
-			self.life_lost = False
 			step, reward = self._run_episode(agent, \
 				Environment.STEPS_PER_EPISODE, obs, eps, evaluating = True)
 			sum_reward += reward
 			sum_step += step
 			print "Finished episode %d, reward = %d, step = %d" % (episode + 1, reward, step)
+		self.need_reset = True
 		print "Average reward per episode = %.4f" % (sum_reward / num_eval_episode)
 		print "Average step per episode = %.4f" % (sum_step / num_eval_episode)
 		return sum_reward / num_eval_episode
 
-	def _run_episode(self, agent, steps_left, obs, eps = 0.0, evaluating = False):
-		if not self.life_lost or self.api.game_over():
+	def _prepare_game(self):
+		if self.need_reset or self.api.game_over():
 			self.api.reset_game()
+			self.need_reset = False
 			if Environment.MAX_NO_OP > 0:
 				num_no_op = self.rng.randint(Environment.MAX_NO_OP + 1) + self.buffer_len
 				for _ in xrange(num_no_op):
@@ -104,6 +110,9 @@ class Environment:
 
 		for _ in xrange(self.buffer_len):
 			self._update_buffer()
+
+	def _run_episode(self, agent, steps_left, obs, eps = 0.0, evaluating = False):
+		self._prepare_game()
 
 		start_lives = self.api.lives()
 		step_count = 0
@@ -118,8 +127,8 @@ class Environment:
 			if self.max_reward > 0:
 				reward_clip = np.clip(reward, -self.max_reward, self.max_reward)
 
-			self.life_lost = not evaluating and self.api.lives() < start_lives
-			is_terminal = self.api.game_over() or self.life_lost or step_count + 1 >= steps_left
+			life_lost = not evaluating and self.api.lives() < start_lives
+			is_terminal = self.api.game_over() or life_lost or step_count + 1 >= steps_left
 			agent.add_experience(obs, is_terminal, action_id, reward_clip, evaluating)
 			sum_reward += reward
 			step_count += 1
@@ -128,7 +137,6 @@ class Environment:
 
 	def _update_buffer(self):
 		self.api.getScreenGrayscale(self.merge_frame[self.merge_id, ...])
-		# print self.api.getEpisodeFrameNumber()
 		self.merge_id = (self.merge_id + 1) % self.buffer_len
 
 	def _repeat_action(self, action):
@@ -148,7 +156,6 @@ class Environment:
 					interpolation = cv2.INTER_LINEAR)
 
 	def _open_log_files(self, agent):
-		# CREATE A FOLDER TO HOLD RESULTS
 		time_str = time.strftime("_%m-%d-%H-%M", time.localtime())
 		base_rom_name = os.path.splitext(os.path.basename(self.rom_name))[0]
 		self.log_dir = '../run_results/' + base_rom_name + time_str
@@ -166,21 +173,23 @@ class Environment:
 
 		with open(self.log_dir + '/info.txt', 'w') as f:
 			f.write('Test env + agent + net + exp\n')
-			f.write('Only reset game if not life_lost\n')
+			f.write('Only reset game if game_over or between training/testing\n')
 			f.write(str(agent.network.network_description + '\n\n'))
 			self._write_info(f, Environment)
 			self._write_info(f, agent.__class__)
 			self._write_info(f, agent.network.__class__)
 
 		with open(self.log_dir + '/results.csv', 'w') as f:
-			f.write("epoch,episode_train,validate_values,total_train_time,steps_per_second,total_validate_time,evaluate_reward\n")
+			f.write("epoch,episode_train,validate_values,evaluate_reward"\
+				",train_time,test_time,steps_per_second\n")
 
-	def _update_log_files(self, agent, epoch, episode, validate_values, total_train_time, total_validate_time, evaluate_values):
+	def _update_log_files(self, agent, epoch, episode, valid_values
+						, eval_values, train_time, test_time, step_per_sec):
 		print "Updating log files"
 		with open(self.log_dir + '/results.csv', 'a') as f:
-			f.write("%d,%d,%.4f,%.0f,%.4f,%.0f,%.4f\n" % (epoch, episode, validate_values, \
-				total_train_time, Environment.STEPS_PER_EPOCH * 1.0 / max(1, total_train_time), 
-				total_validate_time, evaluate_values))
+			f.write("%d,%d,%.4f,%.4f,%d,%d,%.4f\n" % \
+						(epoch, episode, valid_values, eval_values
+						, train_time, test_time, step_per_sec))
 
 		with open(self.network_dir + ('/%03d' % (epoch)) + '.pkl', 'wb') as f:
 			agent.dump(f)
