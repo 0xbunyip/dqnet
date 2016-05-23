@@ -1,14 +1,12 @@
 TODO:
-- Gradient checking
 - Implement screen recording
-- Test speed on GPU
-- Check CPU-GPU memory roundtrip
-- Clean up code, shorten params' names
+- Test speed on GPU and check CPU-GPU memory roundtrip
 - Add function descriptions and comments
 - Move half experiences to GPU
 - Test Double Q-learning
 
 DONE:
+- Clean up code, shorten params' names
 - Read network type from network's weights file
 - Move clone_target to Network class
 - Separate the case of not fixing Q-target
