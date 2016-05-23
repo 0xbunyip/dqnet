@@ -48,7 +48,7 @@ class Experience:
 
 	def get_random_minibatch(self, mbsize):
 		assert self.len >= self.frames_per_state
-		states = np.zeros((mbsize, self.frames_per_state + 1, \
+		states = np.zeros((mbsize, self.frames_per_state + 1, 
 							self.height, self.width), dtype = np.uint8)
 		action = np.zeros((mbsize, 1), dtype = np.uint8)
 		reward = np.zeros((mbsize, 1), dtype = np.float32)
@@ -67,9 +67,9 @@ class Experience:
 			ids = np.asarray([range(start_id[i] - 1, end_id[i] + 1) for i, j in \
 						enumerate(not_terminal) if j == True], dtype = np.int32)
 			
-			states[cnt : cnt + num_ok, ...] = self.obs.take(\
+			states[cnt : cnt + num_ok, ...] = self.obs.take(
 							ids.ravel(), axis = 0, mode = 'wrap')\
-							.reshape(num_ok, self.frames_per_state + 1\
+							.reshape(num_ok, self.frames_per_state + 1
 								, self.height, self.width)
 
 			not_terminal = np.array(not_terminal)
