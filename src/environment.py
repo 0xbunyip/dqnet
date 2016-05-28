@@ -2,7 +2,10 @@ import numpy as np
 import cv2
 import time
 import os
+import psutil
+import gc
 from ale_python_interface import ALEInterface
+from util.mem_convert import bytes2human
 
 class Environment:
 	"""docstring for Environment"""
@@ -44,7 +47,7 @@ class Environment:
 	def get_action_count(self):
 		return len(self.minimal_actions)
 
-	def train(self, agent):
+	def train(self, agent, store_freq):
 		self._open_log_files(agent)
 		obs = np.zeros((self.height, self.width), dtype = np.uint8)
 		epoch_count = Environment.EPOCH_COUNT
@@ -67,7 +70,7 @@ class Environment:
 			train_end = time.time()
 
 			valid_values = agent.get_validate_values()
-			eval_values = self.evaluate(agent)
+			eval_values = self.evaluate(agent, 2)
 			test_end = time.time()
 
 			train_time = train_end - train_start
@@ -78,9 +81,12 @@ class Environment:
 				"\tTrain time = %.0fs, test time = %.0fs, steps/sec = %.4f" \
 					% (epoch + 1, episode, valid_values, eval_values\
 						, train_time, test_time, step_per_sec)
+
 			self._update_log_files(agent, epoch + 1, episode
 								, valid_values, eval_values
-								, train_time, test_time, step_per_sec)
+								, train_time, test_time
+								, step_per_sec, store_freq)
+			gc.collect()
 
 	def evaluate(self, agent, num_eval_episode = 30, eps = 0.05, obs = None):
 		print "\n***Start evaluating"
@@ -189,16 +195,36 @@ class Environment:
 			f.write("epoch,episode_train,validate_values,evaluate_reward"\
 				",train_time,test_time,steps_per_second\n")
 
+		mem = psutil.virtual_memory()
+		with open(self.log_dir + '/memory.csv', 'w') as f:
+			f.write("epoch,available,free,buffers,cached"\
+					",available_readable,used_percent\n")
+			f.write("%d,%d,%d,%d,%d,%s,%.1f\n" % \
+					(0, mem.available, mem.free, mem.buffers, mem.cached
+					, bytes2human(mem.available), mem.percent))
+
 	def _update_log_files(self, agent, epoch, episode, valid_values
-						, eval_values, train_time, test_time, step_per_sec):
+						, eval_values, train_time, test_time, step_per_sec
+						, store_freq):
 		print "Updating log files"
 		with open(self.log_dir + '/results.csv', 'a') as f:
 			f.write("%d,%d,%.4f,%.4f,%d,%d,%.4f\n" % \
 						(epoch, episode, valid_values, eval_values
 						, train_time, test_time, step_per_sec))
 
+		mem = psutil.virtual_memory()
+		with open(self.log_dir + '/memory.csv', 'a') as f:
+			f.write("%d,%d,%d,%d,%d,%s,%.1f\n" % \
+					(epoch, mem.available, mem.free, mem.buffers, mem.cached
+					, bytes2human(mem.available), mem.percent))
+
 		with open(self.network_dir + ('/%03d' % (epoch)) + '.pkl', 'wb') as f:
-			agent.dump(f)
+			agent.dump_network(f)
+
+		if (store_freq >= 0 and epoch >= Environment.EPOCH_COUNT) or \
+			(store_freq > 0 and (epoch % store_freq == 0)):
+			with open(self.network_dir + '/exp.npy', 'wb') as f:
+				agent.dump_exp(f)
 
 	def _write_info(self, f, c):
 		hyper_params = [attr for attr in dir(c) \

@@ -2,6 +2,7 @@ import numpy as np
 import lasagne
 import theano
 import theano.tensor as T
+import cPickle
 from collections import OrderedDict
 
 from theano.printing import debugprint
@@ -18,7 +19,7 @@ class Network:
 	CLONE_FREQ = 10000
 
 	def __init__(self, num_action, mbsize, channel, height, width, discount
-				, up_freq, rng, network_type, init_params = None):
+				, up_freq, rng, network_type, network_file = None):
 		self.num_action = num_action
 		self.height = height
 		self.width = width
@@ -34,33 +35,40 @@ class Network:
 		lasagne.random.set_rng(rng)
 		self.network_description = ''
 
-		if network_type == 'nature':
+		if network_file is not None:
+			with open(network_file, 'rb') as f:
+				self.network_type = cPickle.load(f)
+
+		if self.network_type == 'nature':
 			self.net = self._build_nature_dqn(num_action, channel, height, width)
 			self.tnet = self._build_nature_dqn(num_action, channel, height, width) \
 												if self.freeze > 0 else None
-		elif network_type == 'nips':
+		elif self.network_type == 'nips':
 			self.net = self._build_nips_dqn(num_action, channel, height, width)
 			self.tnet = self._build_nips_dqn(num_action, channel, height, width) \
 												if self.freeze > 0 else None
-		elif network_type == 'simple':
+		elif self.network_type == 'simple':
 			self.net = self._build_simple_network(num_action, channel, height, width)
 			self.tnet = self._build_simple_network(num_action, channel, height, width) \
 												if self.freeze > 0 else None
-		elif network_type == 'bandit':
+		elif self.network_type == 'bandit':
 			self.net = self._build_bandit_network(num_action, channel, height, width)
 			self.tnet = self._build_bandit_network(num_action, channel, height, width) \
 												if self.freeze > 0 else None
-		elif network_type == 'grid':
+		elif self.network_type == 'grid':
 			self.net = self._build_grid_network(num_action, channel, height, width)
 			self.tnet = self._build_grid_network(num_action, channel, height, width) \
 												if self.freeze > 0 else None
-		elif network_type == 'linear':
+		elif self.network_type == 'linear':
 			self.net = self._build_linear_network(num_action, channel, height, width)
 			self.tnet = self._build_linear_network(num_action, channel, height, width) \
 												if self.freeze > 0 else None
 		
-		if init_params is not None:
-			self.set_params(init_params)
+		if network_file is not None:
+			with open(network_file, 'rb') as f:
+				self.network_type = cPickle.load(f)
+				init_params = cPickle.load(f)
+				self.set_params(init_params)
 
 		if self.freeze > 0:
 			self.clone_target()
@@ -222,13 +230,13 @@ class Network:
 		network = lasagne.layers.InputLayer((None, channel, height, width))
 
 		network = lasagne.layers.Conv2DLayer(network
-			, num_filters = 32, filter_size = (2, 2), stride = (1, 1)
+			, num_filters = 64, filter_size = (2, 2), stride = (1, 1)
 			, nonlinearity = lasagne.nonlinearities.rectify
 			, W = lasagne.init.HeUniform('relu')
 			, b = lasagne.init.Constant(0.1))
 
 		network = lasagne.layers.DenseLayer(network
-			, num_units = 256
+			, num_units = 512
 			, nonlinearity = lasagne.nonlinearities.rectify
 			, W = lasagne.init.HeUniform('relu')
 			, b = lasagne.init.Constant(0.1))

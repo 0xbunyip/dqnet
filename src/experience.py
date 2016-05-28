@@ -4,7 +4,7 @@ import time
 class Experience:
 	"""docstring for Experience"""
 	def __init__(self, replay_mem_size, frame_height, frame_width
-				, frames_per_state, rng):
+				, frames_per_state, rng, npz = None):
 		self.rng = rng
 		self.replay_mem_size = replay_mem_size
 		self.top = 0
@@ -13,13 +13,22 @@ class Experience:
 		self.height = frame_height
 		self.width = frame_width
 		self.frames_per_state = frames_per_state
-		self.obs = np.zeros((replay_mem_size, frame_height, frame_width)
-							, dtype = np.uint8)
-		self.action = np.zeros((replay_mem_size, 1), dtype = np.uint8)
-		self.reward = np.zeros((replay_mem_size, 1), dtype = np.float32)
-		self.terminal = np.zeros((replay_mem_size, 1), dtype = np.bool_)
-		self.return_state = np.zeros((frames_per_state, frame_height, frame_width)
-									, dtype = np.uint8)
+
+		if npz is not None:
+			self.top = np.sum(npz['top'])
+			self.len = np.sum(npz['len'])
+			self.obs = npz['obs']
+			self.action = npz['action']
+			self.reward = npz['reward']
+			self.terminal = npz['terminal']
+		else:
+			self.obs = np.zeros((replay_mem_size, frame_height, frame_width)
+								, dtype = np.uint8)
+			self.action = np.zeros((replay_mem_size, 1), dtype = np.uint8)
+			self.reward = np.zeros((replay_mem_size, 1), dtype = np.float32)
+			self.terminal = np.zeros((replay_mem_size, 1), dtype = np.bool_)
+		self.return_state = np.zeros((frames_per_state, frame_height
+									, frame_width), dtype = np.uint8)
 
 	def add_experience(self, obs, is_terminal, action, reward):
 		self.obs[self.top, :, :] = obs
@@ -81,3 +90,14 @@ class Experience:
 				end_id[not_terminal] - 1, mode = 'wrap').reshape(-1, 1)
 			cnt += num_ok
 		return (states, action, reward, terminal)
+
+	def dump(self, f, num_train_obs, validate_states):
+		arrays = {"num_train_obs" : np.array(num_train_obs)
+				, "validate_states" : validate_states
+				, "top" : np.array(self.top)
+				, "len" : self.len
+				, "obs" : self.obs
+				, "action" : self.action
+				, "reward" : self.reward
+				, "terminal" : self.terminal}
+		np.savez_compressed(f, **arrays)

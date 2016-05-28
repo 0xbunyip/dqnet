@@ -19,7 +19,7 @@ class Agent:
 	VALID_SIZE = 2048
 
 	def __init__(self, num_action, frame_height, frame_width, rng, network_type
-				, load_network_from = None):
+				, network_file = None, exp_file = None):
 		self.rng = rng
 		self.num_action = num_action
 		self.mbsize = Agent.MINIBATCH_SIZE
@@ -30,23 +30,25 @@ class Agent:
 						/ Agent.EXPLORE_FRAMES
 
 		self.validate_states = None
-		self.exp_train = Experience(Agent.REPLAY_SIZE, frame_height
-									, frame_width, Agent.HISTORY, rng)
+		if exp_file is not None:
+			with open(exp_file, 'rb') as f:
+				npz = np.load(exp_file)
+				self.num_train_obs = np.sum(npz['num_train_obs'])
+				self.validate_states = npz['validate_states']
+				self.exp_train = Experience(Agent.REPLAY_SIZE, frame_height
+										, frame_width, Agent.HISTORY, rng
+										, npz)
+		else:
+			self.exp_train = Experience(Agent.REPLAY_SIZE, frame_height
+										, frame_width, Agent.HISTORY, rng)
 		self.exp_eval = Experience(Agent.HISTORY, frame_height, frame_width
 									, Agent.HISTORY, rng)
 
-		if load_network_from is None:
-			self.network = Network(num_action, self.mbsize, Agent.HISTORY, 
+		self.network = Network(num_action, self.mbsize, Agent.HISTORY, 
 								frame_height, frame_width, Agent.DISCOUNT
-								, Agent.UPDATE_FREQ, rng, self.network_type)
-		else:
-			with open(load_network_from, 'rb') as f:
-				self.network_type = cPickle.load(f)
-				init_params = cPickle.load(f)
-				self.network = Network(num_action, self.mbsize, Agent.HISTORY, 
-									frame_height, frame_width, Agent.DISCOUNT
-									, Agent.UPDATE_FREQ, rng, self.network_type
-									, init_params)
+								, Agent.UPDATE_FREQ, rng, self.network_type
+								, network_file)
+		self.network_type = self.network.network_type
 
 	def get_action(self, obs, eps = 0.0, evaluating = False):
 		exp = self.exp_eval if evaluating else self.exp_train
@@ -114,9 +116,12 @@ class Agent:
 						self.network.get_max_action_values(states_minibatch))
 		return sum_action_values / self.validate_size
 
-	def dump(self, f):
+	def dump_network(self, f):
 		cPickle.dump(self.network_type, f, -1)
 		cPickle.dump(self.network.get_params(), f, -1)
+
+	def dump_exp(self, f):
+		self.exp_train.dump(f, self.num_train_obs, self.validate_states)
 
 	def _train_one_minibatch(self):
 		states, action, reward, terminal = \
