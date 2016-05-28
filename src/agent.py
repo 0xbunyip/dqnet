@@ -19,7 +19,7 @@ class Agent:
 	VALID_SIZE = 2048
 
 	def __init__(self, num_action, frame_height, frame_width, rng, network_type
-				, network_file = None, exp_file = None):
+				, network_file = None, num_ignore = 0, exp_file = None):
 		self.rng = rng
 		self.num_action = num_action
 		self.mbsize = Agent.MINIBATCH_SIZE
@@ -47,8 +47,9 @@ class Agent:
 		self.network = Network(num_action, self.mbsize, Agent.HISTORY, 
 								frame_height, frame_width, Agent.DISCOUNT
 								, Agent.UPDATE_FREQ, rng, self.network_type
-								, network_file)
-		self.network_type = self.network.network_type
+								, network_file, num_ignore)
+
+		print self.num_train_obs
 
 	def get_action(self, obs, eps = 0.0, evaluating = False):
 		exp = self.exp_eval if evaluating else self.exp_train
@@ -116,12 +117,11 @@ class Agent:
 						self.network.get_max_action_values(states_minibatch))
 		return sum_action_values / self.validate_size
 
-	def dump_network(self, f):
-		cPickle.dump(self.network_type, f, -1)
-		cPickle.dump(self.network.get_params(), f, -1)
+	def dump_network(self, file_name):
+		self.network.dump(file_name)
 
-	def dump_exp(self, f):
-		self.exp_train.dump(f, self.num_train_obs, self.validate_states)
+	def dump_exp(self, file_name):
+		self.exp_train.dump(file_name, self.num_train_obs, self.validate_states)
 
 	def _train_one_minibatch(self):
 		states, action, reward, terminal = \

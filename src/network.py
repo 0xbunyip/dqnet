@@ -3,6 +3,7 @@ import lasagne
 import theano
 import theano.tensor as T
 import cPickle
+import os
 from collections import OrderedDict
 
 from theano.printing import debugprint
@@ -19,7 +20,8 @@ class Network:
 	CLONE_FREQ = 10000
 
 	def __init__(self, num_action, mbsize, channel, height, width, discount
-				, up_freq, rng, network_type, network_file = None):
+				, up_freq, rng, network_type
+				, network_file = None, num_ignore = 0):
 		self.num_action = num_action
 		self.height = height
 		self.width = width
@@ -34,10 +36,6 @@ class Network:
 		self.learning_rate = Network.LEARNING_RATE
 		lasagne.random.set_rng(rng)
 		self.network_description = ''
-
-		if network_file is not None:
-			with open(network_file, 'rb') as f:
-				self.network_type = cPickle.load(f)
 
 		if self.network_type == 'nature':
 			self.net = self._build_nature_dqn(num_action, channel, height, width)
@@ -65,10 +63,7 @@ class Network:
 												if self.freeze > 0 else None
 		
 		if network_file is not None:
-			with open(network_file, 'rb') as f:
-				self.network_type = cPickle.load(f)
-				init_params = cPickle.load(f)
-				self.set_params(init_params)
+			self._init_params(network_file, num_ignore)
 
 		if self.freeze > 0:
 			self.clone_target()
@@ -100,6 +95,54 @@ class Network:
 		# 	debugprint(self.validate_fn, print_type = True, file = f)
 
 		print "Finished building network"
+
+	def _init_params(self, network_file, num_ignore):
+		print "Loading network params from file"
+		_, file_ext = os.path.splitext(network_file)
+		params = []
+		default_params = self.get_params()
+
+		# Legacy: read from cPickle file
+		if file_ext == '.pkl':
+			with open(network_file, 'rb') as f:
+				network_type = cPickle.load(f)
+				params = cPickle.load(f)
+			# Ignore last 'num_ignore' layers' params (both weights and biases)
+			for _ in xrange(num_ignore * 2):
+				params.pop()
+		elif file_ext == '.npz':
+			npz = np.load(network_file)
+			params = []
+
+			# print len(default_params)
+			# print num_ignore
+			num_layers = len(default_params) // 2 - num_ignore
+
+			# Load the first 'num_layers' layers and discard the rest
+			for i in xrange(num_layers):
+				params.append(npz['w' + str(i)]) # Weights
+				params.append(npz['b' + str(i)]) # Biases
+				# print 'w' + str(i), params[-2].shape
+				# print 'b' + str(i), params[-1].shape
+
+		print "Ignore last %d layer(s)" % (num_ignore)
+		# Use default values of params for discarded layers
+		for i in reversed(range(num_ignore)):
+			# print -i * 2 - 2, default_params[-i * 2 - 2].shape
+			# print -i * 2 - 1, default_params[-i * 2 - 1].shape
+			params.append(default_params[-i * 2 - 2]) # Weights
+			params.append(default_params[-i * 2 - 1]) # Biases
+
+		self.set_params(params)
+
+	def dump(self, file_name):
+		params = self.get_params()
+		arrays = {}
+		for i, p in enumerate(params):
+			name = 'w' if i % 2 == 0 else 'b'
+			name = name + str(i // 2)
+			arrays[name] = p
+		np.savez_compressed(file_name, **arrays)
 
 	def _build_nature_dqn(self, num_action, channel, height, width):
 		self.network_description = "Nature deep Q-network"

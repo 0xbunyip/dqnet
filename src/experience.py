@@ -2,7 +2,7 @@ import numpy as np
 import time
 
 class Experience:
-	"""docstring for Experience"""
+	'''docstring for Experience'''
 	def __init__(self, replay_mem_size, frame_height, frame_width
 				, frames_per_state, rng, npz = None):
 		self.rng = rng
@@ -91,13 +91,13 @@ class Experience:
 			cnt += num_ok
 		return (states, action, reward, terminal)
 
-	def dump(self, f, num_train_obs, validate_states):
-		arrays = {"num_train_obs" : np.array(num_train_obs)
-				, "validate_states" : validate_states
-				, "top" : np.array(self.top)
-				, "len" : self.len
-				, "obs" : self.obs
-				, "action" : self.action
-				, "reward" : self.reward
-				, "terminal" : self.terminal}
-		np.savez_compressed(f, **arrays)
+	def dump(self, file_name, num_train_obs, validate_states):
+		arrays = {'num_train_obs' : np.array(num_train_obs)
+				, 'validate_states' : validate_states
+				, 'top' : np.array(self.top)
+				, 'len' : self.len
+				, 'obs' : self.obs
+				, 'action' : self.action
+				, 'reward' : self.reward
+				, 'terminal' : self.terminal}
+		np.savez_compressed(file_name, **arrays)

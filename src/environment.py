@@ -218,13 +218,11 @@ class Environment:
 					(epoch, mem.available, mem.free, mem.buffers, mem.cached
 					, bytes2human(mem.available), mem.percent))
 
-		with open(self.network_dir + ('/%03d' % (epoch)) + '.pkl', 'wb') as f:
-			agent.dump_network(f)
+		agent.dump_network(self.network_dir + ('/%03d' % (epoch)) + '.npz')
 
 		if (store_freq >= 0 and epoch >= Environment.EPOCH_COUNT) or \
-			(store_freq > 0 and (epoch % store_freq == 0)):
-			with open(self.network_dir + '/exp.npy', 'wb') as f:
-				agent.dump_exp(f)
+				(store_freq > 0 and (epoch % store_freq == 0)):
+			agent.dump_exp(self.network_dir + '/exp.npz')
 
 	def _write_info(self, f, c):
 		hyper_params = [attr for attr in dir(c) \
