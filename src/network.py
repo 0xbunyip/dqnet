@@ -11,14 +11,14 @@ from theano.printing import debugprint
 class Network:
 	"""docstring for Network"""
 
+	CLONE_FREQ = 10000
 	GRAD_MOMENTUM = 0.95
+	INPUT_SCALE = 255.0
 	LEARNING_RATE = 0.00025
 	MAX_ERROR = 1.0
 	MIN_SGRAD = 0.01
-	INPUT_SCALE = 255.0
 	SGRAD_MOMENTUM = 0.95
-	CLONE_FREQ = 10000
-
+	
 	def __init__(self, num_action, mbsize, channel, height, width, discount
 				, up_freq, rng, network_type
 				, network_file = None, num_ignore = 0):
@@ -273,13 +273,13 @@ class Network:
 		network = lasagne.layers.InputLayer((None, channel, height, width))
 
 		network = lasagne.layers.Conv2DLayer(network
-			, num_filters = 64, filter_size = (2, 2), stride = (1, 1)
+			, num_filters = 16, filter_size = (2, 2), stride = (1, 1)
 			, nonlinearity = lasagne.nonlinearities.rectify
 			, W = lasagne.init.HeUniform('relu')
 			, b = lasagne.init.Constant(0.1))
 
 		network = lasagne.layers.DenseLayer(network
-			, num_units = 512
+			, num_units = 64
 			, nonlinearity = lasagne.nonlinearities.rectify
 			, W = lasagne.init.HeUniform('relu')
 			, b = lasagne.init.Constant(0.1))

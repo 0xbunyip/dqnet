@@ -5,12 +5,10 @@ TODO:
 - Move half experiences to GPU
 - Test Double Q-learning
 
-DOING:
+DONE:
 - Implement transfer learning by loading part of network's weights
 - Add memory logging and garbage collection code
 - Save experience and add continue-training feature
-
-DONE:
 - Clean up code, shorten params' names
 - Read network type from network's weights file
 - Move clone_target to Network class

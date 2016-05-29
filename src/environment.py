@@ -11,15 +11,15 @@ class Environment:
 	"""docstring for Environment"""
 
 	BUFFER_LEN = 2
+	EPISODE_STEPS = 18000
 	EPOCH_COUNT = 200
+	EPOCH_STEPS = 250000
 	FRAMES_SKIP = 4
 	FRAME_HEIGHT = 84
 	FRAME_WIDTH = 84
 	MAX_NO_OP = 30
 	MAX_REWARD = 1
-	EPISODE_STEPS = 18000
-	EPOCH_STEPS = 250000
-
+	
 	def __init__(self, rom_name, rng, display_screen = False):
 		self.api = ALEInterface()
 		self.api.setInt('random_seed', rng.randint(333))
@@ -70,7 +70,7 @@ class Environment:
 			train_end = time.time()
 
 			valid_values = agent.get_validate_values()
-			eval_values = self.evaluate(agent, 2)
+			eval_values = self.evaluate(agent)
 			test_end = time.time()
 
 			train_time = train_end - train_start

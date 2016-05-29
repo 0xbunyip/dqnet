@@ -11,8 +11,8 @@ import numpy as np
 ############### Hyper-parameters ###############
 Environment.BUFFER_LEN = 1
 Environment.EPISODE_STEPS = 18000
-Environment.EPOCH_COUNT = 2
-Environment.EPOCH_STEPS = 500
+Environment.EPOCH_COUNT = 1
+Environment.EPOCH_STEPS = 100
 Environment.FRAME_HEIGHT = 3
 Environment.FRAME_WIDTH = 3
 Environment.FRAMES_SKIP = 1
@@ -54,6 +54,16 @@ def get_arguments(argv):
 	parser.add_argument('-f', '--file-network', dest = 'network_file'
 		, default = None
 		, help = 'Network file to load from')
+	parser.add_argument('-i', '--ignore-layers', dest = 'ignore_layers'
+		, default = 0, type = int
+		, help = "Number of layers of params in network file to ignore")
+	parser.add_argument('-x', '--file-exp', dest = 'exp_file'
+		, default = None
+		, help = "Experience file to load from")
+	parser.add_argument('-y', '--store-frequency', dest = 'store_frequency'
+		, default = 0, type = int
+		, help = "Save experience every this amount of epoch"\
+					" (-1 for no save, 0 to save at last epoch)")
 	parser.add_argument('-u', '--random-run', dest = 'random_run'
 		, action = 'store_true'
 		, help = 'Totally randomize train/evaluate process')
@@ -72,14 +82,16 @@ def main(argv):
 						, display_screen = arg.display_screen)
 		agn = Agent(env.get_action_count()
 				, Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH
-				, rng, arg.network_type)
-		env.train(agn, ask_for_more = True)
+				, rng, arg.network_type, arg.network_file, arg.ignore_layers
+				, arg.exp_file)
+		env.train(agn, arg.store_frequency, ask_for_more = True)
 	elif arg.network_file is not None:
 		env = Environment(rng, one_state = False
 						, display_screen = arg.display_screen)
 		agn = Agent(env.get_action_count()
-						, Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH
-						, rng, arg.network_type, arg.network_file)
+					, Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH, rng
+					, arg.network_type, arg.network_file, arg.ignore_layers
+					, arg.exp_file)
 		env.evaluate(agn)
 
 if __name__ == '__main__':

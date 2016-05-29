@@ -10,8 +10,8 @@ import sys
 ############### Hyper-parameters ###############
 Environment.BUFFER_LEN = 2
 Environment.EPISODE_STEPS = 18000
-Environment.EPOCH_COUNT = 1
-Environment.EPOCH_STEPS = 100
+Environment.EPOCH_COUNT = 100
+Environment.EPOCH_STEPS = 250000
 Environment.FRAMES_SKIP = 4
 Environment.FRAME_HEIGHT = 84
 Environment.FRAME_WIDTH = 84
@@ -24,10 +24,10 @@ Agent.FINAL_EXPLORE = 0.1
 Agent.HISTORY = 4
 Agent.INIT_EXPLORE = 1.0
 Agent.MINIBATCH_SIZE = 32
-Agent.REPLAY_SIZE = 50000
-Agent.REPLAY_START = 50
+Agent.REPLAY_SIZE = 1000000
+Agent.REPLAY_START = 50000
 Agent.UPDATE_FREQ = 4
-Agent.VALID_SIZE = 32
+Agent.VALID_SIZE = 3200
 
 Network.CLONE_FREQ = 10000
 Network.GRAD_MOMENTUM = 0.95

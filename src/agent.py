@@ -7,10 +7,10 @@ import matplotlib.pyplot as plt
 class Agent:
 	"""docstring for Agent"""
 
-	HISTORY = 4
 	DISCOUNT = 0.95
-	FINAL_EXPLORE = 0.1
 	EXPLORE_FRAMES = 1000000
+	FINAL_EXPLORE = 0.1
+	HISTORY = 4
 	INIT_EXPLORE = 1.0
 	MINIBATCH_SIZE = 32
 	REPLAY_SIZE = 500000
@@ -121,6 +121,7 @@ class Agent:
 		self.network.dump(file_name)
 
 	def dump_exp(self, file_name):
+		print "Saving experience"
 		self.exp_train.dump(file_name, self.num_train_obs, self.validate_states)
 
 	def _train_one_minibatch(self):

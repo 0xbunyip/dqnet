@@ -3,6 +3,7 @@ import cv2
 import time
 import os
 import psutil
+import gc
 from bandit_game import BanditGame
 from util.mem_convert import bytes2human
 
@@ -13,9 +14,9 @@ class Environment:
 	EPISODE_STEPS = 18000
 	EPOCH_COUNT = 10
 	EPOCH_STEPS = 10000
+	FRAMES_SKIP = 1
 	FRAME_HEIGHT = 3
 	FRAME_WIDTH = 3
-	FRAMES_SKIP = 1
 	MAX_NO_OP = 0
 	MAX_REWARD = 0
 	
@@ -42,7 +43,7 @@ class Environment:
 	def get_action_count(self):
 		return len(self.minimal_actions)
 
-	def train(self, agent, ask_for_more = False):
+	def train(self, agent, store_freq, ask_for_more = False):
 		self._open_log_files(agent)
 		obs = np.zeros((self.height, self.width), dtype = np.uint8)
 
@@ -77,9 +78,12 @@ class Environment:
 				"\tTrain time = %.0fs, test time = %.0fs, steps/sec = %.4f" \
 					% (epoch + 1, episode, valid_values, eval_values\
 						, train_time, test_time, step_per_sec)
+
 			self._update_log_files(agent, epoch + 1, episode
 								, valid_values, eval_values
-								, train_time, test_time, step_per_sec)
+								, train_time, test_time
+								, step_per_sec, store_freq)
+			gc.collect()
 			epoch += 1
 			if ask_for_more and epoch >= epoch_count:
 				st = raw_input("\n***Enter number of epoch to continue training: ")
@@ -216,7 +220,8 @@ class Environment:
 					, bytes2human(mem.available), mem.percent))
 
 	def _update_log_files(self, agent, epoch, episode, valid_values
-						, eval_values, train_time, test_time, step_per_sec):
+						, eval_values, train_time, test_time, step_per_sec
+						, store_freq):
 		print "Updating log files"
 		with open(self.log_dir + '/results.csv', 'a') as f:
 			f.write("%d,%d,%.4f,%.4f,%d,%d,%.4f\n" % \
@@ -229,8 +234,11 @@ class Environment:
 					(epoch, mem.available, mem.free, mem.buffers, mem.cached
 					, bytes2human(mem.available), mem.percent))
 
-		with open(self.network_dir + ('/%03d' % (epoch)) + '.pkl', 'wb') as f:
-			agent.dump(f)
+		agent.dump_network(self.network_dir + ('/%03d' % (epoch)) + '.npz')
+
+		if (store_freq >= 0 and epoch >= Environment.EPOCH_COUNT) or \
+				(store_freq > 0 and (epoch % store_freq == 0)):
+			agent.dump_exp(self.network_dir + '/exp.npz')
 
 	def _write_info(self, f, c):
 		hyper_params = [attr for attr in dir(c) \
