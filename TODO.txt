@@ -1,11 +1,11 @@
 TODO:
-- Implement screen recording
 - Test speed on GPU and check CPU-GPU memory roundtrip
 - Add function descriptions and comments
 - Move half experiences to GPU
 - Test Double Q-learning
 
 DONE:
+- Implement screen recording
 - Implement transfer learning by loading part of network's weights
 - Add memory logging and garbage collection code
 - Save experience and add continue-training feature

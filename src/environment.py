@@ -27,22 +27,22 @@ class Environment:
 		self.api.setFloat('repeat_action_probability', 0.0)
 		self.rom_name = rom_name
 		self.rng = rng
-		self.api.loadROM('../rom/' + self.rom_name)
-		self.minimal_actions = self.api.getMinimalActionSet()
 		self.repeat = Environment.FRAMES_SKIP
 		self.buffer_len = Environment.BUFFER_LEN
 		self.height = Environment.FRAME_HEIGHT
 		self.width = Environment.FRAME_WIDTH
+		self.merge_id = 0
+		self.max_reward = Environment.MAX_REWARD
+		self.log_dir = ''
+		self.network_dir = ''
 
+		self.api.loadROM('../rom/' + self.rom_name)
+		self.minimal_actions = self.api.getMinimalActionSet()
 		original_width, original_height = self.api.getScreenDims()
 		self.merge_frame = np.zeros((self.buffer_len
 								, original_height
 								, original_width)
 								, dtype = np.uint8)
-		self.merge_id = 0
-		self.max_reward = Environment.MAX_REWARD
-		self.log_dir = ''
-		self.network_dir = ''
 
 	def get_action_count(self):
 		return len(self.minimal_actions)
@@ -231,3 +231,35 @@ class Environment:
 			f.write(str(c.__name__) + '.' + param + ' = ' + \
 					str(getattr(c, param)) + '\n')
 		f.write('\n')
+
+	def _setup_record(self, network_file):
+		file_name, _ = os.path.splitext(os.path.basename(network_file))
+		time_str = time.strftime("_%m-%d-%H-%M", time.localtime())
+		img_dir = os.path.dirname(network_file) + '/images_' \
+					+ file_name + time_str
+		rom_name, _ = os.path.splitext(self.rom_name)
+		out_name = os.path.dirname(network_file) + '/' + rom_name + '_' \
+					+ file_name + time_str + '.mov'
+		print out_name
+
+		try:
+			os.stat(img_dir)
+		except OSError:
+			os.makedirs(img_dir)
+
+		self.api.setString('record_screen_dir', img_dir)
+		self.api.loadROM('../rom/' + self.rom_name)
+		return img_dir, out_name
+
+	def record_run(self, agent, network_file):
+		img_dir, out_name = self._setup_record(network_file)
+		self.evaluate(agent, num_eval_episode = 1)
+		script = \
+				"""
+					{
+					    ffmpeg -r 60 -i %s/%%06d.png -f mov -c:v libx264 %s
+					} || {
+					    avconv -r 60 -i %s/%%06d.png -f mov -c:v libx264 %s
+					}
+				""" % (img_dir, out_name, img_dir, out_name)
+		os.system(script)

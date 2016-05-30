@@ -66,6 +66,9 @@ def get_arguments(argv):
 		, default = 0, type = int
 		, help = "Save experience every this amount of epoch"\
 					" (-1 for no save, 0 to save at last epoch)")
+	parser.add_argument('-s', '--screen-record', dest = 'screen_record'
+		, action = 'store_true'
+		, help = "Record game play and save as a video")
 	parser.add_argument('-u', '--random-run', dest = 'random_run'
 		, action = 'store_true'
 		, help = "Totally randomize train/evaluate process")
@@ -94,7 +97,11 @@ def main(argv):
 						, Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH, rng
 						, arg.network_type, arg.network_file, arg.ignore_layers
 						, arg.exp_file)
-		env.evaluate(agn)
+
+		if arg.screen_record:
+			env.record_run(agn, arg.network_file)
+		else:
+			env.evaluate(agn)
 
 if __name__ == '__main__':
 	main(sys.argv[1:])

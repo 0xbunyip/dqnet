@@ -49,8 +49,6 @@ class Agent:
 								, Agent.UPDATE_FREQ, rng, self.network_type
 								, network_file, num_ignore)
 
-		print self.num_train_obs
-
 	def get_action(self, obs, eps = 0.0, evaluating = False):
 		exp = self.exp_eval if evaluating else self.exp_train
 		if not exp.can_get_state():
