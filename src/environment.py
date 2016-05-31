@@ -186,7 +186,8 @@ class Environment:
 			os.makedirs(self.network_dir)
 
 		with open(self.log_dir + '/info.txt', 'w') as f:
-			f.write(str(agent.network.network_description + '\n\n'))
+			f.write(str(agent.network.network_description + '\n'))
+			f.write(agent.network.transfer_desc + '\n\n')
 			self._write_info(f, Environment)
 			self._write_info(f, agent.__class__)
 			self._write_info(f, agent.network.__class__)

@@ -62,6 +62,7 @@ class Network:
 			self.tnet = self._build_linear_network(num_action, channel, height, width) \
 												if self.freeze > 0 else None
 		
+		self.transfer_desc = ""
 		if network_file is not None:
 			self._init_params(network_file, num_ignore)
 
@@ -113,23 +114,17 @@ class Network:
 		elif file_ext == '.npz':
 			npz = np.load(network_file)
 			params = []
-
-			# print len(default_params)
-			# print num_ignore
 			num_layers = len(default_params) // 2 - num_ignore
-
 			# Load the first 'num_layers' layers and discard the rest
 			for i in xrange(num_layers):
 				params.append(npz['w' + str(i)]) # Weights
 				params.append(npz['b' + str(i)]) # Biases
-				# print 'w' + str(i), params[-2].shape
-				# print 'b' + str(i), params[-1].shape
 
-		print "Ignore last %d layer(s)" % (num_ignore)
+		self.transfer_desc = "Load network from " + network_file
+		self.transfer_desc += "\nIgnore last %d layer(s)" % (num_ignore)
+
 		# Use default values of params for discarded layers
 		for i in reversed(range(num_ignore)):
-			# print -i * 2 - 2, default_params[-i * 2 - 2].shape
-			# print -i * 2 - 1, default_params[-i * 2 - 1].shape
 			params.append(default_params[-i * 2 - 2]) # Weights
 			params.append(default_params[-i * 2 - 1]) # Biases
 
