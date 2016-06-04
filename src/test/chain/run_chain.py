@@ -2,7 +2,8 @@ import numpy as np
 import unittest
 import os.path, sys
 import theano
-sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir))
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__))
+											, os.pardir, os.pardir))
 from network import Network
 
 """
@@ -76,17 +77,20 @@ class TestNetwork(unittest.TestCase):
 	def setUp(self):
 		self.rng = np.random.RandomState(123)
 		self.mdp = ChainMDP()
-		Network.SCALE_FACTOR = 1.0
+		self.algorithm = 'double_q_learning'
+
+		Network.CLONE_FREQ = 1
+		Network.GRAD_MOMENTUM = 0.95
+		Network.INPUT_SCALE = 1.0
 		Network.LEARNING_RATE = 0.025
 		Network.MAX_ERROR = 0.0
-		Network.MIN_SQR_GRAD = 0.01
-		Network.GRAD_MOMENTUM = 0.95
-		Network.SQR_GRAD_MOMENTUM = 0.95
-		Network.TARGET_NETWORK_UPDATE_FREQUENCY = 1
+		Network.MIN_SGRAD = 0.01
+		Network.SGRAD_MOMENTUM = 0.95
 
 	def get_q_table(self, net):
 		mdp = self.mdp
-		states = np.zeros((mdp.num_states, 2, 1, mdp.num_states)).astype(theano.config.floatX)
+		states = np.zeros((mdp.num_states, 2, 1, mdp.num_states)).astype(
+														theano.config.floatX)
 		for i in range(mdp.num_states):
 			states[i, 0, ...] = mdp.states[i]
 		return net.get_action_values(states)
@@ -98,15 +102,17 @@ class TestNetwork(unittest.TestCase):
 			action_index = self.rng.randint(0, mdp.num_actions)
 			reward, nstate, terminal = mdp.act(cstate, action_index)
 
-			states = np.zeros((1, 2, 1, mdp.num_states)).astype(theano.config.floatX)
+			states = np.zeros((1, 2, 1, mdp.num_states)).astype(
+														theano.config.floatX)
 			states[:, 0, :, :] = cstate
 			states[:, 1, :, :] = nstate
-			net.train_one_minibatch(states, mdp.actions[action_index], reward, terminal)
+			net.train_one_minibatch(states, mdp.actions[action_index]
+									, reward, terminal)
 
 	def test_convergence_no_freeze(self):
-		Network.TARGET_NETWORK_UPDATE_FREQUENCY = 0
+		Network.CLONE_FREQ = 0
 		net = Network(self.mdp.num_actions, 1, 1, 1, self.mdp.num_states, 
-			0.5, 1, self.rng, 'linear')
+			0.5, 1, self.rng, 'linear', self.algorithm)
 		params = net.get_params()
 		zero_params = [np.zeros_like(param) for param in params]
 		net.set_params(zero_params)
@@ -116,9 +122,9 @@ class TestNetwork(unittest.TestCase):
 			, self.get_q_table(net), rtol = 0.00001)
 
 	def test_convergence_permanent_freeze(self):
-		Network.TARGET_NETWORK_UPDATE_FREQUENCY = 1000000
+		Network.CLONE_FREQ = 1000000
 		net = Network(self.mdp.num_actions, 1, 1, 1, self.mdp.num_states, 
-			0.5, 1, self.rng, 'linear')
+			0.5, 1, self.rng, 'linear', self.algorithm)
 		params = net.get_params()
 		zero_params = [np.zeros_like(param) for param in params]
 		net.set_params(zero_params)
@@ -129,9 +135,9 @@ class TestNetwork(unittest.TestCase):
 			, self.get_q_table(net), rtol = 0.00001)
 
 	def test_convergence_frequent_freeze(self):
-		Network.TARGET_NETWORK_UPDATE_FREQUENCY = 2
+		Network.CLONE_FREQ = 2
 		net = Network(self.mdp.num_actions, 1, 1, 1, self.mdp.num_states, 
-			0.5, 1, self.rng, 'linear')
+			0.5, 1, self.rng, 'linear', self.algorithm)
 		params = net.get_params()
 		zero_params = [np.zeros_like(param) for param in params]
 		net.set_params(zero_params)
@@ -142,9 +148,9 @@ class TestNetwork(unittest.TestCase):
 			, self.get_q_table(net), rtol = 0.00001)
 
 	def test_convergence_one_freeze(self):
-		Network.TARGET_NETWORK_UPDATE_FREQUENCY = 501
+		Network.CLONE_FREQ = 501
 		net = Network(self.mdp.num_actions, 1, 1, 1, self.mdp.num_states, 
-			0.5, 1, self.rng, 'linear')
+			0.5, 1, self.rng, 'linear', self.algorithm)
 		params = net.get_params()
 		zero_params = [np.zeros_like(param) for param in params]
 		net.set_params(zero_params)
@@ -155,9 +161,9 @@ class TestNetwork(unittest.TestCase):
 			, self.get_q_table(net), rtol = 0.00001)
 
 	def test_convergence_random_initialization(self):
-		Network.TARGET_NETWORK_UPDATE_FREQUENCY = 1
+		Network.CLONE_FREQ = 1
 		net = Network(self.mdp.num_actions, 1, 1, 1, self.mdp.num_states, 
-			0.5, 1, self.rng, 'linear')
+			0.5, 1, self.rng, 'linear', self.algorithm)
 		self.train(net, 1000)
 
 		np.testing.assert_allclose([[.7, .25], [.35, .5], [.25, 1.0]]
@@ -165,9 +171,9 @@ class TestNetwork(unittest.TestCase):
 
 	def test_convergence_clip_error(self):
 		Network.MAX_ERROR = 0.05
-		Network.TARGET_NETWORK_UPDATE_FREQUENCY = 2
+		Network.CLONE_FREQ = 2
 		net = Network(self.mdp.num_actions, 1, 1, 1, self.mdp.num_states, 
-			0.5, 1, self.rng, 'linear')
+			0.5, 1, self.rng, 'linear', self.algorithm)
 		params = net.get_params()
 		zero_params = [np.zeros_like(param) for param in params]
 		net.set_params(zero_params)
@@ -178,13 +184,13 @@ class TestNetwork(unittest.TestCase):
 			, self.get_q_table(net), rtol = 0.00001)
 
 	def test_updates_no_freeze(self):
-		Network.TARGET_NETWORK_UPDATE_FREQUENCY = 0
-		Network.MIN_SQR_GRAD = 1.0
+		Network.CLONE_FREQ = 0
+		Network.MIN_SGRAD = 1.0
 		Network.LEARNING_RATE = 1.0
 		Network.GRAD_MOMENTUM = 1.0
-		Network.SQR_GRAD_MOMENTUM = 1.0
+		Network.SGRAD_MOMENTUM = 1.0
 		net = Network(self.mdp.num_actions, 1, 1, 1, self.mdp.num_states, 
-			0.5, 1, self.rng, 'linear')
+			0.5, 1, self.rng, 'linear', self.algorithm)
 		params = net.get_params()
 		zero_params = [np.zeros_like(param) for param in params]
 		net.set_params(zero_params)

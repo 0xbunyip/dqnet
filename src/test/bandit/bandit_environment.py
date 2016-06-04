@@ -201,7 +201,7 @@ class Environment:
 			os.makedirs(self.network_dir)
 
 		with open(self.log_dir + '/info.txt', 'w') as f:
-			f.write(str(agent.network.network_description + '\n'))
+			f.write(agent.network.get_network_info())
 			f.write(self.api.game_info() + '\n\n')
 			self._write_info(f, Environment)
 			self._write_info(f, agent.__class__)

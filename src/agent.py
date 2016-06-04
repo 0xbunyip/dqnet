@@ -19,7 +19,8 @@ class Agent:
 	VALID_SIZE = 2048
 
 	def __init__(self, num_action, frame_height, frame_width, rng, network_type
-				, network_file = None, num_ignore = 0, exp_file = None):
+				, algorithm, network_file = None, num_ignore = 0
+				, exp_file = None):
 		self.rng = rng
 		self.num_action = num_action
 		self.mbsize = Agent.MINIBATCH_SIZE
@@ -30,6 +31,7 @@ class Agent:
 						/ Agent.EXPLORE_FRAMES
 
 		self.validate_states = None
+		self.exp_file = exp_file
 		if exp_file is not None:
 			with open(exp_file, 'rb') as f:
 				npz = np.load(exp_file)
@@ -46,8 +48,8 @@ class Agent:
 
 		self.network = Network(num_action, self.mbsize, Agent.HISTORY, 
 								frame_height, frame_width, Agent.DISCOUNT
-								, Agent.UPDATE_FREQ, rng, self.network_type
-								, network_file, num_ignore)
+								, Agent.UPDATE_FREQ, rng, network_type
+								, algorithm, network_file, num_ignore)
 
 	def get_action(self, obs, eps = 0.0, evaluating = False):
 		exp = self.exp_eval if evaluating else self.exp_train
@@ -60,7 +62,7 @@ class Agent:
 		if not evaluating:
 			if self.num_train_obs < Agent.REPLAY_START:
 				random_action = self.rng.randint(self.num_action)
-				# print "Start training, not enough experience (%d), "
+				# print "Start training, not enough experience (%d), "\
 				# 	"action = %d" % (self.num_train_obs + 1, random_action)
 				return random_action, True
 			eps = Agent.INIT_EXPLORE + self.eps_decay * \
@@ -70,7 +72,7 @@ class Agent:
 
 		if self.rng.rand() < eps:
 			random_action = self.rng.randint(self.num_action)
-			# print "Uniform random action (obs = %d, eps = %.3f), "
+			# print "Uniform random action (obs = %d, eps = %.3f), "\
 			# 		"action = %d" % (self.num_train_obs + 1, eps, random_action)
 			return random_action, True
 
@@ -114,6 +116,13 @@ class Agent:
 			sum_action_values += np.sum(
 						self.network.get_max_action_values(states_minibatch))
 		return sum_action_values / self.validate_size
+
+	def get_info(self):
+		info = "Train from beginning (new experiences)\n"
+		if self.exp_file is not None:
+			info = "Get experiences from " + self.exp_file + '\n'
+		info = info + self.network.get_info()
+		return info
 
 	def dump_network(self, file_name):
 		self.network.dump(file_name)

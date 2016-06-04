@@ -47,7 +47,7 @@ class Environment:
 	def get_action_count(self):
 		return len(self.minimal_actions)
 
-	def train(self, agent, store_freq):
+	def train(self, agent, store_freq, eval_eps = 0.05):
 		self._open_log_files(agent)
 		obs = np.zeros((self.height, self.width), dtype = np.uint8)
 		epoch_count = Environment.EPOCH_COUNT
@@ -70,7 +70,7 @@ class Environment:
 			train_end = time.time()
 
 			valid_values = agent.get_validate_values()
-			eval_values = self.evaluate(agent)
+			eval_values = self.evaluate(agent, 30, eval_eps)
 			test_end = time.time()
 
 			train_time = train_end - train_start
@@ -186,8 +186,7 @@ class Environment:
 			os.makedirs(self.network_dir)
 
 		with open(self.log_dir + '/info.txt', 'w') as f:
-			f.write(str(agent.network.network_description + '\n'))
-			f.write(agent.network.transfer_desc + '\n\n')
+			f.write(agent.get_info())
 			self._write_info(f, Environment)
 			self._write_info(f, agent.__class__)
 			self._write_info(f, agent.network.__class__)
@@ -252,9 +251,9 @@ class Environment:
 		self.api.loadROM('../rom/' + self.rom_name)
 		return img_dir, out_name
 
-	def record_run(self, agent, network_file):
+	def record_run(self, agent, network_file, eval_eps = 0.05):
 		img_dir, out_name = self._setup_record(network_file)
-		self.evaluate(agent, num_eval_episode = 1)
+		self.evaluate(agent, 1, eval_eps)
 		script = \
 				"""
 					{

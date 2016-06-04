@@ -2,7 +2,8 @@
 
 import os.path, sys
 import argparse
-sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir))
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__))
+							, os.pardir, os.pardir))
 from grid_environment import Environment
 from agent import Agent
 from network import Network
@@ -11,7 +12,7 @@ import numpy as np
 ############### Hyper-parameters ###############
 Environment.BUFFER_LEN = 1
 Environment.EPISODE_STEPS = 18000
-Environment.EPOCH_COUNT = 100
+Environment.EPOCH_COUNT = 50
 Environment.EPOCH_STEPS = 10000
 Environment.FRAME_HEIGHT = 4
 Environment.FRAME_WIDTH = 4
@@ -20,7 +21,7 @@ Environment.MAX_NO_OP = 0
 Environment.MAX_REWARD = 0
 
 Agent.DISCOUNT = 0.99
-Agent.EXPLORE_FRAMES = 200000
+Agent.EXPLORE_FRAMES = 100000
 Agent.FINAL_EXPLORE = 0.1
 Agent.HISTORY = 2
 Agent.INIT_EXPLORE = 1.0
@@ -51,6 +52,10 @@ def get_arguments(argv):
 		, default = 'grid', type = str
 		, choices = ['nature', 'nips', 'simple', 'bandit', 'grid', 'linear']
 		, help = 'Type of network to use as function approximator')
+	parser.add_argument('-a', '--algorithm', dest = 'algorithm'
+		, default = 'q_learning', type = str
+		, choices = ['q_learning', 'double_q_learning']
+		, help = "Reinforcement learning algorithm to use as update rules")
 	parser.add_argument('-f', '--file-network', dest = 'network_file'
 		, default = None
 		, help = 'Network file to load from')
@@ -61,7 +66,7 @@ def get_arguments(argv):
 		, default = None
 		, help = "Experience file to load from")
 	parser.add_argument('-y', '--store-frequency', dest = 'store_frequency'
-		, default = 0, type = int
+		, default = -1, type = int
 		, help = "Save experience every this amount of epoch"\
 					" (-1 for no save, 0 to save at last epoch)")
 	parser.add_argument('-u', '--random-run', dest = 'random_run'
@@ -81,15 +86,15 @@ def main(argv):
 		env = Environment(rng, display_screen = arg.display_screen)
 		agn = Agent(env.get_action_count()
 				, Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH
-				, rng, arg.network_type, arg.network_file, arg.ignore_layers
-				, arg.exp_file)
+				, rng, arg.network_type, arg.algorithm, arg.network_file
+				, arg.ignore_layers, arg.exp_file)
 		env.train(agn, arg.store_frequency, ask_for_more = True)
 	elif arg.network_file is not None:
 		env = Environment(rng, display_screen = arg.display_screen)
 		agn = Agent(env.get_action_count()
 					, Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH, rng
-					, arg.network_type, arg.network_file, arg.ignore_layers
-					, arg.exp_file)
+					, arg.network_type, arg.algorithm, arg.network_file
+					, arg.ignore_layers, arg.exp_file)
 		env.evaluate(agn)
 
 if __name__ == '__main__':

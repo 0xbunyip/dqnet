@@ -20,7 +20,7 @@ class Network:
 	SGRAD_MOMENTUM = 0.95
 	
 	def __init__(self, num_action, mbsize, channel, height, width, discount
-				, up_freq, rng, network_type
+				, up_freq, rng, network_type, algorithm
 				, network_file = None, num_ignore = 0):
 		self.num_action = num_action
 		self.height = height
@@ -31,6 +31,7 @@ class Network:
 		self.up_freq = up_freq
 		self.freeze = Network.CLONE_FREQ / up_freq
 		self.network_type = network_type
+		self.algorithm = algorithm
 		self.rng = rng
 		self.train_count = 0
 		self.learning_rate = Network.LEARNING_RATE
@@ -96,6 +97,12 @@ class Network:
 		# 	debugprint(self.validate_fn, print_type = True, file = f)
 
 		print "Finished building network"
+
+	def get_info(self):
+		info = self.network_description + '\n'
+		info += self.transfer_desc + '\n'
+		info += self.algorithm + '\n\n'
+		return info
 
 	def _init_params(self, network_file, num_ignore):
 		print "Loading network params from file"
@@ -268,13 +275,13 @@ class Network:
 		network = lasagne.layers.InputLayer((None, channel, height, width))
 
 		network = lasagne.layers.Conv2DLayer(network
-			, num_filters = 16, filter_size = (2, 2), stride = (1, 1)
+			, num_filters = 32, filter_size = (2, 2), stride = (1, 1)
 			, nonlinearity = lasagne.nonlinearities.rectify
 			, W = lasagne.init.HeUniform('relu')
 			, b = lasagne.init.Constant(0.1))
 
 		network = lasagne.layers.DenseLayer(network
-			, num_units = 64
+			, num_units = 128
 			, nonlinearity = lasagne.nonlinearities.rectify
 			, W = lasagne.init.HeUniform('relu')
 			, b = lasagne.init.Constant(0.1))
@@ -300,12 +307,31 @@ class Network:
 		current_values = T.sum(current_values_matrix * action_mask
 								, axis = 1).reshape((-1, 1))
 
-		if self.tnet is not None:
-			target_values_matrix = lasagne.layers.get_output(self.tnet, next_state)
-		else:
-			target_values_matrix = lasagne.layers.get_output(self.net, next_state)
+		if self.algorithm == 'q_learning':
+			if self.tnet is not None:
+				target_values_matrix = lasagne.layers.get_output(self.tnet
+																, next_state)
+			else:
+				target_values_matrix = lasagne.layers.get_output(self.net
+																, next_state)
+			bootstrap_values = T.max(target_values_matrix
+									, axis = 1, keepdims = True)
+		elif self.algorithm == 'double_q_learning':
+			select_actions = T.argmax(lasagne.layers.get_output(
+							self.net, next_state), axis = 1, keepdims = True)
+			select_mask = T.eq(T.arange(self.num_action).reshape((1, -1))
+								, select_actions.astype(theano.config.floatX))
 
-		bootstrap_values = T.max(target_values_matrix, axis = 1, keepdims = True)
+			if self.tnet is not None:
+				print "Evaluating selected actions on target network"
+				eval_values = lasagne.layers.get_output(self.tnet, next_state)
+			else: # The same as q_learning (but slower)
+				print "Evaluating selected actions on online network"
+				eval_values = lasagne.layers.get_output(self.net, next_state)
+
+			bootstrap_values = T.sum(eval_values * select_mask
+									, axis = 1, keepdims = True)
+		
 		terminal_floatX = terminal.astype(theano.config.floatX)
 		target_values = reward + self.discount * \
 			(T.ones_like(terminal_floatX) - terminal_floatX) * bootstrap_values
