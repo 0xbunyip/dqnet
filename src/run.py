@@ -56,11 +56,12 @@ def get_arguments(argv):
 		, help = "Display screen while evaluating")
 
 	parser.add_argument('-t', '--network-type', dest = 'network_type'
-		, default = 'nature', type = str
-		, choices = ['nature', 'nips', 'simple', 'bandit', 'grid', 'linear']
+		, default = 'double', type = str
+		, choices = ['nature', 'nips', 'simple', 'bandit', 'grid', 'linear'
+					, 'double']
 		, help = "Type of network to use as function approximator")
 	parser.add_argument('-a', '--algorithm', dest = 'algorithm'
-		, default = 'q_learning', type = str
+		, default = 'double_q_learning', type = str
 		, choices = ['q_learning', 'double_q_learning']
 		, help = "Reinforcement learning algorithm to use as update rules")
 

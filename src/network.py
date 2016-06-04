@@ -38,7 +38,11 @@ class Network:
 		lasagne.random.set_rng(rng)
 		self.network_description = ''
 
-		if self.network_type == 'nature':
+		if self.network_type == 'double':
+			self.net = self._build_double_dqn(num_action, channel, height, width)
+			self.tnet = self._build_double_dqn(num_action, channel, height, width) \
+												if self.freeze > 0 else None
+		elif self.network_type == 'nature':
 			self.net = self._build_nature_dqn(num_action, channel, height, width)
 			self.tnet = self._build_nature_dqn(num_action, channel, height, width) \
 												if self.freeze > 0 else None
@@ -145,6 +149,45 @@ class Network:
 			name = name + str(i // 2)
 			arrays[name] = p
 		np.savez_compressed(file_name, **arrays)
+
+	def _build_double_dqn(self, num_action, channel, height, width):
+		self.network_description = "Double deep Q-network (with shared bias)"
+		network = lasagne.layers.InputLayer((None, channel, height, width))
+
+		network = lasagne.layers.Conv2DLayer(network
+			, num_filters = 32, filter_size = (8, 8), stride = (4, 4)
+			, nonlinearity = lasagne.nonlinearities.rectify
+			, W = lasagne.init.HeUniform('relu')
+			, b = lasagne.init.Constant(0.1))
+
+		network = lasagne.layers.Conv2DLayer(network
+			, num_filters = 64, filter_size = (4, 4), stride = (2, 2)
+			, nonlinearity = lasagne.nonlinearities.rectify
+			, W = lasagne.init.HeUniform('relu')
+			, b = lasagne.init.Constant(0.1))
+
+		network = lasagne.layers.Conv2DLayer(network
+			, num_filters = 64, filter_size = (3, 3), stride = (1, 1)
+			, nonlinearity = lasagne.nonlinearities.rectify
+			, W = lasagne.init.HeUniform('relu')
+			, b = lasagne.init.Constant(0.1))
+
+		network = lasagne.layers.DenseLayer(network
+			, num_units = 512
+			, nonlinearity = lasagne.nonlinearities.rectify
+			, W = lasagne.init.HeUniform('relu')
+			, b = lasagne.init.Constant(0.1))
+
+		network = lasagne.layers.DenseLayer(network
+			, num_units = num_action
+			, nonlinearity = None
+			, W = lasagne.init.HeUniform()
+			, b = None)
+
+		network = lasagne.layers.BiasLayer(network
+			, b = lasagne.init.Constant(0.1)
+			, shared_axes=(0, 1))
+		return network
 
 	def _build_nature_dqn(self, num_action, channel, height, width):
 		self.network_description = "Nature deep Q-network"
@@ -323,10 +366,10 @@ class Network:
 								, select_actions.astype(theano.config.floatX))
 
 			if self.tnet is not None:
-				print "Evaluating selected actions on target network"
+				# print "Evaluating selected actions on target network"
 				eval_values = lasagne.layers.get_output(self.tnet, next_state)
 			else: # The same as q_learning (but slower)
-				print "Evaluating selected actions on online network"
+				# print "Evaluating selected actions on online network"
 				eval_values = lasagne.layers.get_output(self.net, next_state)
 
 			bootstrap_values = T.sum(eval_values * select_mask
