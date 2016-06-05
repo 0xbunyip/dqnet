@@ -12,6 +12,7 @@ Environment.BUFFER_LEN = 2
 Environment.EPISODE_STEPS = 18000
 Environment.EPOCH_COUNT = 100
 Environment.EPOCH_STEPS = 250000
+Environment.EVAL_EPS = 0.001
 Environment.FRAMES_SKIP = 4
 Environment.FRAME_HEIGHT = 84
 Environment.FRAME_WIDTH = 84
@@ -76,6 +77,13 @@ def get_arguments(argv):
 		, default = None
 		, help = "Experience file to load from")
 
+	parser.add_argument('-o', '--continue-folder', dest = 'continue_folder'
+		, default = None
+		, help = "Folder to load network and experience to continue training")
+	parser.add_argument('-c', '--continue-epoch', dest = 'continue_epoch'
+		, default = 0, type = int
+		, help = "Last epoch before continue training")
+
 	parser.add_argument('-y', '--store-frequency', dest = 'store_frequency'
 		, default = 0, type = int
 		, help = "Save experience every this amount of epoch"\
@@ -90,35 +98,44 @@ def get_arguments(argv):
 		, help = "Totally randomize train/evaluate process")
 	return parser.parse_args(argv)
 
-def main(argv):
+def build_rl_components(argv):
 	arg = get_arguments(argv)
-
 	if arg.random_run:
 		rng = np.random.RandomState()
 	else:
 		rng = np.random.RandomState(333)
 
+	env = Environment(arg.rom_name, rng, display_screen = arg.display_screen)
+
+	if arg.continue_folder is not None:
+		network_file = arg.continue_folder +\
+						 '/network/%03d.npz' % (arg.continue_epoch)
+		exp_file = arg.continue_folder + '/network/exp.npz'
+
+		agn = Agent(env.get_action_count()
+					, Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH, rng
+					, arg.network_type, arg.algorithm, network_file
+					, arg.ignore_layers, exp_file)
+	else:
+		agn = Agent(env.get_action_count()
+					, Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH, rng
+					, arg.network_type, arg.algorithm, arg.network_file
+					, arg.ignore_layers, arg.exp_file)
+	return env, agn
+
+def main(argv):
+	arg = get_arguments(argv)
+
 	if not arg.evaluating:
-		env = Environment(arg.rom_name, rng
-						, display_screen = arg.display_screen)
-		agn = Agent(env.get_action_count()
-				, Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH, rng
-				, arg.network_type, arg.algorithm, arg.network_file
-				, arg.ignore_layers, arg.exp_file)
-		env.train(agn, arg.store_frequency, arg.eval_eps)
-
+		env, agn = build_rl_components(argv)
+		env.train(agn, arg.store_frequency
+					, arg.continue_folder, arg.continue_epoch)
 	elif arg.network_file is not None:
-		env = Environment(arg.rom_name, rng
-						, display_screen = arg.display_screen)
-		agn = Agent(env.get_action_count()
-						, Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH, rng
-						, arg.network_type, arg.algorithm, arg.network_file
-						, arg.ignore_layers, arg.exp_file)
-
+		env, agn = build_rl_components(argv)
 		if arg.screen_record:
-			env.record_run(agn, arg.network_file, arg.eval_eps)
+			env.record_run(agn, arg.network_file)
 		else:
-			env.evaluate(agn, 30, arg.eval_eps)
+			env.evaluate(agn)
 
 if __name__ == '__main__':
 	main(sys.argv[1:])
