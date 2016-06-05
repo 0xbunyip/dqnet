@@ -10,9 +10,9 @@ import sys
 ############### Hyper-parameters ###############
 Environment.BUFFER_LEN = 2
 Environment.EPISODE_STEPS = 18000
-Environment.EPOCH_COUNT = 100
-Environment.EPOCH_STEPS = 250000
-Environment.EVAL_EPS = 0.001
+Environment.EPOCH_COUNT = 3
+Environment.EPOCH_STEPS = 100
+Environment.EVAL_EPS = 0.5
 Environment.FRAMES_SKIP = 4
 Environment.FRAME_HEIGHT = 84
 Environment.FRAME_WIDTH = 84
@@ -25,10 +25,10 @@ Agent.FINAL_EXPLORE = 0.01
 Agent.HISTORY = 4
 Agent.INIT_EXPLORE = 1.0
 Agent.MINIBATCH_SIZE = 32
-Agent.REPLAY_SIZE = 1000000
-Agent.REPLAY_START = 50000
+Agent.REPLAY_SIZE = 10000
+Agent.REPLAY_START = 50
 Agent.UPDATE_FREQ = 4
-Agent.VALID_SIZE = 3200
+Agent.VALID_SIZE = 32
 
 Network.CLONE_FREQ = 30000
 Network.GRAD_MOMENTUM = 0.95
@@ -48,10 +48,6 @@ def get_arguments(argv):
 	parser.add_argument('-e', '--evaluate-only', dest = 'evaluating'
 		, action = 'store_true'
 		, help = "Enable evaluating process (default: %(default)s)")
-	parser.add_argument('-p', '--eval-eps', dest = 'eval_eps'
-		, default = 0.05, type = float
-		, help = "Evaluation epsilon for eps-greedy")
-
 	parser.add_argument('-d', '--display-screen', dest = 'display_screen'
 		, action = 'store_true'
 		, help = "Display screen while evaluating")

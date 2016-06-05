@@ -72,7 +72,7 @@ class Environment:
 			train_end = time.time()
 
 			valid_values = agent.get_validate_values()
-			eval_values = self.evaluate(agent, 30, self.eval_eps)
+			eval_values = self.evaluate(agent)
 			test_end = time.time()
 
 			train_time = train_end - train_start
@@ -90,7 +90,7 @@ class Environment:
 								, step_per_sec, store_freq)
 			gc.collect()
 
-	def evaluate(self, agent, episodes = 30, eps = 0.05, obs = None):
+	def evaluate(self, agent, episodes = 30, obs = None):
 		print "\n***Start evaluating"
 		if obs is None:
 			obs = np.zeros((self.height, self.width), dtype = np.uint8)
@@ -99,7 +99,7 @@ class Environment:
 		self.need_reset = True
 		for episode in xrange(episodes):
 			step, reward = self._run_episode(agent, 
-				Environment.EPISODE_STEPS, obs, eps, evaluating = True)
+				Environment.EPISODE_STEPS, obs, self.eval_eps, evaluating = True)
 			sum_reward += reward
 			sum_step += step
 			print "Finished episode %d, reward = %d, step = %d" \

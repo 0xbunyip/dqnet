@@ -14,6 +14,7 @@ class Environment:
 	EPISODE_STEPS = 18000
 	EPOCH_COUNT = 10
 	EPOCH_STEPS = 10000
+	EVAL_EPS = 0.001
 	FRAMES_SKIP = 1
 	FRAME_HEIGHT = 3
 	FRAME_WIDTH = 3
@@ -29,6 +30,7 @@ class Environment:
 		self.minimal_actions = self.api.getMinimalActionSet()
 		self.repeat = Environment.FRAMES_SKIP
 		self.buffer_len = Environment.BUFFER_LEN
+		self.eval_eps = Environment.EVAL_EPS
 		
 		self.merge_frame = np.zeros((self.buffer_len
 								, self.height
@@ -43,12 +45,14 @@ class Environment:
 	def get_action_count(self):
 		return len(self.minimal_actions)
 
-	def train(self, agent, store_freq, ask_for_more = False):
-		self._open_log_files(agent)
+	def train(self, agent, store_freq, folder = None, start_epoch = 0
+			, ask_for_more = False):
+		self._open_log_files(agent, folder)
 		obs = np.zeros((self.height, self.width), dtype = np.uint8)
+		epoch_count = Environment.EPOCH_COUNT
 
 		self.need_reset = True
-		epoch = 0
+		epoch = start_epoch
 		epoch_count = Environment.EPOCH_COUNT
 		while epoch < epoch_count:
 			steps_left = Environment.EPOCH_STEPS
@@ -94,16 +98,16 @@ class Environment:
 					more_epoch = 0
 				epoch_count += more_epoch
 
-	def evaluate(self, agent, num_eval_episode = 30, eps = 0.05, obs = None):
+	def evaluate(self, agent, episodes = 30, obs = None):
 		print "\n***Start evaluating"
 		if obs is None:
 			obs = np.zeros((self.height, self.width), dtype = np.uint8)
 		sum_reward = 0.0
 		sum_step = 0.0
 		self.need_reset = True
-		for episode in xrange(num_eval_episode):
+		for episode in xrange(episodes):
 			step, reward = self._run_episode(agent, 
-				Environment.EPISODE_STEPS, obs, eps, evaluating = True
+				Environment.EPISODE_STEPS, obs, self.eval_eps, evaluating = True
 				, print_Q = self.display_screen)
 			sum_reward += reward
 			sum_step += step
@@ -111,9 +115,9 @@ class Environment:
 					% (episode + 1, reward, step)
 		self.need_reset = True
 		print "Average reward per episode = %.4f" \
-				% (sum_reward / num_eval_episode)
-		print "Average step per episode = %.4f" % (sum_step / num_eval_episode)
-		return sum_reward / num_eval_episode
+				% (sum_reward / episodes)
+		print "Average step per episode = %.4f" % (sum_step / episodes)
+		return sum_reward / episodes
 
 	def _prepare_game(self):
 		if self.need_reset or self.api.game_over():
@@ -184,9 +188,15 @@ class Environment:
 					dsize = (self.width, self.height),
 					interpolation = cv2.INTER_LINEAR)
 
-	def _open_log_files(self, agent):
+	def _open_log_files(self, agent, folder):
 		time_str = time.strftime("_%m-%d-%H-%M", time.localtime())
 		base_rom_name = 'bandit'
+
+		if folder is not None:
+			self.log_dir = folder
+			self.network_dir = self.log_dir + '/network'
+			return
+
 		self.log_dir = '../run_results/bandit/' + base_rom_name + time_str
 		self.network_dir = self.log_dir + '/network'
 
@@ -201,7 +211,7 @@ class Environment:
 			os.makedirs(self.network_dir)
 
 		with open(self.log_dir + '/info.txt', 'w') as f:
-			f.write(agent.network.get_network_info())
+			f.write(agent.get_info())
 			f.write(self.api.game_info() + '\n\n')
 			self._write_info(f, Environment)
 			self._write_info(f, agent.__class__)

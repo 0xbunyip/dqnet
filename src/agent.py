@@ -43,7 +43,7 @@ class Agent:
 		else:
 			self.exp_train = Experience(Agent.REPLAY_SIZE, frame_height
 										, frame_width, Agent.HISTORY, rng)
-		self.exp_eval = Experience(Agent.HISTORY, frame_height, frame_width
+		self.exp_eval = Experience(Agent.HISTORY + 1, frame_height, frame_width
 									, Agent.HISTORY, rng)
 
 		self.network = Network(num_action, self.mbsize, Agent.HISTORY, 
