@@ -56,20 +56,9 @@ class Experience:
 			if i < 0:
 				i += self.mem_size
 			j = i + self.history - 1
-			# print i, j, self.terminal.take(np.arange(i, j), axis = 0, mode = 'wrap')
-
 			if not np.any(self.terminal.take(np.arange(i, j)
 											, axis = 0, mode = 'wrap')):
 				self.id_list.append(i)
-
-		# if self.mem_size < 5:
-		# 	print "add_experience"
-		# 	print self.obs
-		# 	print self.terminal
-		# 	print self.action
-		# 	print self.reward
-		# 	print "self.id_list", self.id_list
-		# 	raw_input()
 
 	def can_get_state(self):
 		return self.obs_episode + 1 >= self.history
@@ -106,15 +95,6 @@ class Experience:
 			rand_id + self.history - 1, mode = 'wrap').reshape(-1, 1)
 		terminal[...] = self.terminal.take(
 			rand_id + self.history - 1, mode = 'wrap').reshape(-1, 1)
-
-		# print "self.id_list", self.id_list
-		# print "rand_id", rand_id
-		# print "ids", ids
-		# print states
-		# print action
-		# print reward
-		# print terminal
-		# raw_input()
 
 		return (states, action, reward, terminal)
 
