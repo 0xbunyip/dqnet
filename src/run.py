@@ -53,9 +53,9 @@ def get_arguments(argv):
 		, help = "Display screen while evaluating")
 
 	parser.add_argument('-t', '--network-type', dest = 'network_type'
-		, default = 'double', type = str
+		, default = 'duel', type = str
 		, choices = ['nature', 'nips', 'simple', 'bandit', 'grid', 'linear'
-					, 'double']
+					, 'double', 'duel']
 		, help = "Type of network to use as function approximator")
 	parser.add_argument('-a', '--algorithm', dest = 'algorithm'
 		, default = 'double_q_learning', type = str
