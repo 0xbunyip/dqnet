@@ -324,7 +324,7 @@ class Network:
 			, b = lasagne.init.Constant(0.1))
 
 		network = lasagne.layers.DenseLayer(network
-			, num_units = 128
+			, num_units = 256
 			, nonlinearity = lasagne.nonlinearities.rectify
 			, W = lasagne.init.HeUniform('relu')
 			, b = lasagne.init.Constant(0.1))

@@ -14,8 +14,9 @@ Environment.BUFFER_LEN = 1
 Environment.EPISODE_STEPS = 18000
 Environment.EPOCH_COUNT = 10
 Environment.EPOCH_STEPS = 2000
-Environment.FRAME_HEIGHT = 8
-Environment.FRAME_WIDTH = 8
+Environment.EVAL_EPS = 0.05
+Environment.FRAME_HEIGHT = 3
+Environment.FRAME_WIDTH = 3
 Environment.FRAMES_SKIP = 1
 Environment.MAX_NO_OP = 0
 Environment.MAX_REWARD = 0
@@ -26,10 +27,10 @@ Agent.FINAL_EXPLORE = 0.1
 Agent.HISTORY = 1
 Agent.INIT_EXPLORE = 1.0
 Agent.MINIBATCH_SIZE = 32
-Agent.REPLAY_SIZE = 10000
-Agent.REPLAY_START = 500
+Agent.REPLAY_SIZE = 500
+Agent.REPLAY_START = 100
 Agent.UPDATE_FREQ = 4
-Agent.VALID_SIZE = 320
+Agent.VALID_SIZE = 32
 
 Network.CLONE_FREQ = 1000
 Network.GRAD_MOMENTUM = 0.95
@@ -48,6 +49,7 @@ def get_arguments(argv):
 	parser.add_argument('-d', '--display-screen', dest = 'display_screen'
 		, action = 'store_true'
 		, help = 'Display screen while evaluating')
+
 	parser.add_argument('-t', '--network-type', dest = 'network_type'
 		, default = 'bandit', type = str
 		, choices = ['nature', 'nips', 'simple', 'bandit', 'grid', 'linear']
@@ -56,47 +58,69 @@ def get_arguments(argv):
 		, default = 'q_learning', type = str
 		, choices = ['q_learning', 'double_q_learning']
 		, help = "Reinforcement learning algorithm to use as update rules")
+
 	parser.add_argument('-f', '--file-network', dest = 'network_file'
 		, default = None
 		, help = 'Network file to load from')
 	parser.add_argument('-i', '--ignore-layers', dest = 'ignore_layers'
 		, default = 0, type = int
 		, help = "Number of layers of params in network file to ignore")
+
 	parser.add_argument('-x', '--file-exp', dest = 'exp_file'
 		, default = None
 		, help = "Experience file to load from")
+
+	parser.add_argument('-o', '--continue-folder', dest = 'continue_folder'
+		, default = None
+		, help = "Folder to load network and experience to continue training")
+	parser.add_argument('-c', '--continue-epoch', dest = 'continue_epoch'
+		, default = 0, type = int
+		, help = "Last epoch before continue training")
+
 	parser.add_argument('-y', '--store-frequency', dest = 'store_frequency'
 		, default = -1, type = int
 		, help = "Save experience every this amount of epoch"\
 					" (-1 for no save, 0 to save at last epoch)")
+
 	parser.add_argument('-u', '--random-run', dest = 'random_run'
 		, action = 'store_true'
 		, help = 'Totally randomize train/evaluate process')
 	return parser.parse_args(argv)
 
-def main(argv):
+def build_rl_components(argv):
 	arg = get_arguments(argv)
-
 	if arg.random_run:
 		rng = np.random.RandomState()
 	else:
 		rng = np.random.RandomState(333)
 
-	if not arg.evaluating:
-		env = Environment(rng, one_state = False
-						, display_screen = arg.display_screen)
+	env = Environment(rng, display_screen = arg.display_screen)
+
+	if arg.continue_folder is not None:
+		network_file = arg.continue_folder +\
+						 '/network/%03d.npz' % (arg.continue_epoch)
+		exp_file = arg.continue_folder + '/network/exp.npz'
+
 		agn = Agent(env.get_action_count()
-				, Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH
-				, rng, arg.network_type, arg.algorithm, arg.network_file
-				, arg.ignore_layers, arg.exp_file)
-		env.train(agn, arg.store_frequency, ask_for_more = True)
-	elif arg.network_file is not None:
-		env = Environment(rng, one_state = False
-						, display_screen = arg.display_screen)
+					, Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH, rng
+					, arg.network_type, arg.algorithm, network_file
+					, arg.ignore_layers, exp_file)
+	else:
 		agn = Agent(env.get_action_count()
 					, Environment.FRAME_HEIGHT, Environment.FRAME_WIDTH, rng
 					, arg.network_type, arg.algorithm, arg.network_file
 					, arg.ignore_layers, arg.exp_file)
+	return env, agn
+
+def main(argv):
+	arg = get_arguments(argv)
+
+	if not arg.evaluating:
+		env, agn = build_rl_components(argv)
+		env.train(agn, arg.store_frequency, arg.continue_folder
+					, arg.continue_epoch, ask_for_more = True)
+	elif arg.network_file is not None:
+		env, agn = build_rl_components(argv)
 		env.evaluate(agn)
 
 if __name__ == '__main__':
