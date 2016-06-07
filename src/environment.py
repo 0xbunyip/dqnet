@@ -4,6 +4,9 @@ import time
 import os
 import psutil
 import gc
+import pipes
+import subprocess
+import sys
 from ale_python_interface import ALEInterface
 from util.mem_convert import bytes2human
 
@@ -195,6 +198,10 @@ class Environment:
 			os.makedirs(self.network_dir)
 
 		with open(self.log_dir + '/info.txt', 'w') as f:
+			f.write('Commit: ' + subprocess.check_output(['git', 'rev-parse', 'HEAD']))
+			f.write('\Run command: ')
+			f.write(' '.join(pipes.quote(x) for x in sys.argv))
+			f.write('\n\n')
 			f.write(agent.get_info())
 			self._write_info(f, Environment)
 			self._write_info(f, agent.__class__)
@@ -211,6 +218,10 @@ class Environment:
 			f.write("%d,%d,%d,%d,%d,%s,%.1f\n" % \
 					(0, mem.available, mem.free, mem.buffers, mem.cached
 					, bytes2human(mem.available), mem.percent))
+
+		# From https://github.com/spragunr/deep_q_rl/pull/49/files
+		with open(os.path.join(self.log_dir, 'git-diff'), 'w') as f:
+			f.write(subprocess.check_output(['git', 'diff', 'HEAD']))
 
 	def _update_log_files(self, agent, epoch, episode, valid_values
 						, eval_values, train_time, test_time, step_per_sec
@@ -266,9 +277,9 @@ class Environment:
 		script = \
 				"""
 					{
-					    ffmpeg -r 60 -i %s/%%06d.png -f mov -c:v libx264 %s
+						ffmpeg -r 60 -i %s/%%06d.png -f mov -c:v libx264 %s
 					} || {
-					    avconv -r 60 -i %s/%%06d.png -f mov -c:v libx264 %s
+						avconv -r 60 -i %s/%%06d.png -f mov -c:v libx264 %s
 					}
 				""" % (img_dir, out_name, img_dir, out_name)
 		os.system(script)
