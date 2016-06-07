@@ -11,7 +11,7 @@ class Environment:
 	"""docstring for Environment"""
 
 	BUFFER_LEN = 2
-	EPISODE_STEPS = 18000
+	EPISODE_FRAMES = 18000
 	EPOCH_COUNT = 200
 	EPOCH_STEPS = 250000
 	EVAL_EPS = 0.001
@@ -32,6 +32,7 @@ class Environment:
 		self.buffer_len = Environment.BUFFER_LEN
 		self.height = Environment.FRAME_HEIGHT
 		self.width = Environment.FRAME_WIDTH
+		self.episode_steps = Environment.EPISODE_FRAMES / Environment.FRAMES_SKIP
 		self.merge_id = 0
 		self.max_reward = Environment.MAX_REWARD
 		self.eval_eps = Environment.EVAL_EPS
@@ -54,8 +55,8 @@ class Environment:
 		obs = np.zeros((self.height, self.width), dtype = np.uint8)
 		epoch_count = Environment.EPOCH_COUNT
 
-		self.need_reset = True
 		for epoch in xrange(start_epoch, epoch_count):
+			self.need_reset = True
 			steps_left = Environment.EPOCH_STEPS
 
 			print "\n" + "=" * 50
@@ -96,10 +97,10 @@ class Environment:
 			obs = np.zeros((self.height, self.width), dtype = np.uint8)
 		sum_reward = 0.0
 		sum_step = 0.0
-		self.need_reset = True
 		for episode in xrange(episodes):
+			self.need_reset = True
 			step, reward = self._run_episode(agent, 
-				Environment.EPISODE_STEPS, obs, self.eval_eps, evaluating = True)
+				self.episode_steps, obs, self.eval_eps, evaluating = True)
 			sum_reward += reward
 			sum_step += step
 			print "Finished episode %d, reward = %d, step = %d" \

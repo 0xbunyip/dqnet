@@ -9,7 +9,7 @@ import sys
 
 ############### Hyper-parameters ###############
 Environment.BUFFER_LEN = 2
-Environment.EPISODE_STEPS = 18000
+Environment.EPISODE_FRAMES = 18000
 Environment.EPOCH_COUNT = 100
 Environment.EPOCH_STEPS = 250000
 Environment.EVAL_EPS = 0.001
