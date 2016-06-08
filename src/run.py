@@ -33,8 +33,9 @@ Agent.VALID_SIZE = 3200
 Network.CLONE_FREQ = 30000
 Network.GRAD_MOMENTUM = 0.95
 Network.INPUT_SCALE = 255.0
-Network.LEARNING_RATE = 0.00025
+Network.LEARNING_RATE = 0.0000625
 Network.MAX_ERROR = 1.0
+Network.MAX_NORM = 10
 Network.MIN_SGRAD = 0.01
 Network.SGRAD_MOMENTUM = 0.95
 ################################################
@@ -53,9 +54,9 @@ def get_arguments(argv):
 		, help = "Display screen while evaluating")
 
 	parser.add_argument('-t', '--network-type', dest = 'network_type'
-		, default = 'double', type = str
+		, default = 'duel', type = str
 		, choices = ['nature', 'nips', 'simple', 'bandit', 'grid', 'linear'
-					, 'double']
+					, 'double', 'duel']
 		, help = "Type of network to use as function approximator")
 	parser.add_argument('-a', '--algorithm', dest = 'algorithm'
 		, default = 'double_q_learning', type = str
