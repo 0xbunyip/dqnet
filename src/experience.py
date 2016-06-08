@@ -45,7 +45,7 @@ class Experience:
 
 		if self.len >= self.mem_size:
 			if len(self.id_list) > 0 and self.top == self.id_list[0]:
-				self.id_list = self.id_list[1:]
+				self.id_list.pop(0)
 
 		self.top = (self.top + 1) % self.mem_size
 		if self.len < self.mem_size:
