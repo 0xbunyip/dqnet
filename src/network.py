@@ -237,10 +237,10 @@ class Network:
 		}
 		return theano.function([], loss, updates = updates, givens = train_givens)
 
-	def _grad_clip_norm(tensor_vars, max_norm):
+	def _clip_gradient_norm(self, tensor_vars, max_norm):
 		norm = T.sqrt(sum(T.sum(tensor ** 2) for tensor in tensor_vars))
 		dtype = np.dtype(theano.config.floatX).type
-		return max_norm / T.max(dtype(max_norm), norm)
+		return max_norm / T.maximum(dtype(max_norm), norm)
 
 	def _get_rmsprop_updates(self, loss, params, lr, grad_momentum
 							, sqr_momentum, min_grad):
@@ -250,7 +250,7 @@ class Network:
 		grads = theano.grad(loss, params)
 		scale_factor = 1.0
 		if self.max_norm > 0:
-			scale_factor = self._grad_clip_norm(grads, self.max_norm)
+			scale_factor = self._clip_gradient_norm(grads, self.max_norm)
 		updates = OrderedDict()
 
 		# Using theano constant to prevent upcasting of float32
