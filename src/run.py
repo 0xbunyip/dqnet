@@ -25,16 +25,17 @@ Agent.FINAL_EXPLORE = 0.01
 Agent.HISTORY = 4
 Agent.INIT_EXPLORE = 1.0
 Agent.MINIBATCH_SIZE = 32
-Agent.REPLAY_SIZE = 10000
-Agent.REPLAY_START = 50
+Agent.REPLAY_SIZE = 1000000
+Agent.REPLAY_START = 50000
 Agent.UPDATE_FREQ = 4
-Agent.VALID_SIZE = 32
+Agent.VALID_SIZE = 3200
 
 Network.CLONE_FREQ = 30000
 Network.GRAD_MOMENTUM = 0.95
 Network.INPUT_SCALE = 255.0
-Network.LEARNING_RATE = 0.00025
+Network.LEARNING_RATE = 0.0000625
 Network.MAX_ERROR = 1.0
+Network.MAX_NORM = 10
 Network.MIN_SGRAD = 0.01
 Network.SGRAD_MOMENTUM = 0.95
 ################################################

@@ -5,6 +5,7 @@ import theano.tensor as T
 import cPickle
 import os
 from collections import OrderedDict
+from util.duel_aggregator import DuelAggregateLayer
 
 from theano.printing import debugprint
 
@@ -16,6 +17,7 @@ class Network:
 	INPUT_SCALE = 255.0
 	LEARNING_RATE = 0.00025
 	MAX_ERROR = 1.0
+	MAX_NORM = 10.0
 	MIN_SGRAD = 0.01
 	SGRAD_MOMENTUM = 0.95
 	
@@ -30,6 +32,7 @@ class Network:
 		self.discount = discount
 		self.up_freq = up_freq
 		self.freeze = Network.CLONE_FREQ / up_freq
+		self.max_norm = Network.MAX_NORM
 		self.network_type = network_type
 		self.algorithm = algorithm
 		self.rng = rng
@@ -37,10 +40,14 @@ class Network:
 		self.learning_rate = Network.LEARNING_RATE
 		lasagne.random.set_rng(rng)
 		self.network_description = ''
+		self.adv_net = None
+		self.adv_tnet = None
 
 		if self.network_type == 'duel':
-			self.net = self._build_duel_dqn(num_action, channel, height, width)
-			self.tnet = self._build_duel_dqn(num_action, channel, height, width) \
+			self.net, self.adv_net = self._build_duel_dqn(num_action, channel
+															, height, width)
+			self.tnet, self.adv_tnet = self._build_duel_dqn(num_action, channel
+															, height, width) \
 												if self.freeze > 0 else None
 		elif self.network_type == 'double':
 			self.net = self._build_double_dqn(num_action, channel, height, width)
@@ -154,6 +161,10 @@ class Network:
 			arrays[name] = p
 		np.savez_compressed(file_name, **arrays)
 
+	def _get_action_var(self, network, state):
+		return T.argmax(lasagne.layers.get_output(network, state)
+						, axis = 1, keepdims = True)
+
 	def _compile_train_function(self):
 		state = T.tensor4(dtype = theano.config.floatX)
 		action = T.col(dtype = 'uint8')
@@ -169,24 +180,27 @@ class Network:
 
 		if self.algorithm == 'q_learning':
 			if self.tnet is not None:
-				target_values_matrix = lasagne.layers.get_output(self.tnet
-																, next_state)
+				target_values = lasagne.layers.get_output(self.tnet, next_state)
 			else:
-				target_values_matrix = lasagne.layers.get_output(self.net
-																, next_state)
-			bootstrap_values = T.max(target_values_matrix
-									, axis = 1, keepdims = True)
+				target_values = lasagne.layers.get_output(self.net, next_state)
+			bootstrap_values = T.max(target_values, axis = 1, keepdims = True)
+
 		elif self.algorithm == 'double_q_learning':
-			select_actions = T.argmax(lasagne.layers.get_output(
-							self.net, next_state), axis = 1, keepdims = True)
+			if self.network_type == 'duel':
+				# Get argmax actions from advantage values
+				select_actions = self._get_action_var(self.adv_net, next_state)
+			else:
+				# Get argmax actions from Q values
+				select_actions = self._get_action_var(self.net, next_state)
 			select_mask = T.eq(T.arange(self.num_action).reshape((1, -1))
 								, select_actions.astype(theano.config.floatX))
 
 			if self.tnet is not None:
-				# print "Evaluating selected actions on target network"
+				# Evaluate argmax actions on target network
 				eval_values = lasagne.layers.get_output(self.tnet, next_state)
-			else: # The same as q_learning (but slower)
-				# print "Evaluating selected actions on online network"
+			else:
+				# Evaluate argmax actions on online network
+				# (the same as q_learning but slower)
 				eval_values = lasagne.layers.get_output(self.net, next_state)
 
 			bootstrap_values = T.sum(eval_values * select_mask
@@ -229,6 +243,8 @@ class Network:
 		# 	https://github.com/Lasagne/Lasagne/blob/master/lasagne/updates.py
 
 		grads = theano.grad(loss, params)
+		if self.max_norm > 0:
+			grads = lasagne.updates.total_norm_constraint(grads, self.max_norm)
 		updates = OrderedDict()
 
 		# Using theano constant to prevent upcasting of float32
@@ -252,9 +268,8 @@ class Network:
 
 	def _compile_evaluate_function(self):
 		state = T.tensor4(dtype = theano.config.floatX)
-		action_values_matrix = lasagne.layers.get_output(self.net, state)
-		action_to_take = T.argmax(action_values_matrix, axis = 1)[0]
-		return theano.function([], action_to_take
+		action = self._get_action_var(self.adv_net, state)
+		return theano.function([], action
 			, givens = {state : self.shared_single / Network.INPUT_SCALE})
 
 	def _compile_validate_function(self):
@@ -338,7 +353,7 @@ class Network:
 			, W = lasagne.init.HeUniform('relu')
 			, b = lasagne.init.Constant(0.1))
 
-		value_stream = lasagne.layers.DenseLayer(network
+		value_stream = lasagne.layers.DenseLayer(value_stream
 			, num_units = 1
 			, nonlinearity = None
 			, W = lasagne.init.HeUniform()
@@ -350,13 +365,15 @@ class Network:
 			, W = lasagne.init.HeUniform('relu')
 			, b = lasagne.init.Constant(0.1))
 
-		advantage_stream = lasagne.layers.DenseLayer(network
+		advantage_stream = lasagne.layers.DenseLayer(advantage_stream
 			, num_units = num_action
 			, nonlinearity = None
 			, W = lasagne.init.HeUniform()
 			, b = lasagne.init.Constant(0.1))
 
-		return network
+		network = DuelAggregateLayer([value_stream, advantage_stream])
+
+		return network, advantage_stream
 
 	def _build_double_dqn(self, num_action, channel, height, width):
 		self.network_description = "Double deep Q-network (with shared bias)"
