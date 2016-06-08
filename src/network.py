@@ -237,14 +237,20 @@ class Network:
 		}
 		return theano.function([], loss, updates = updates, givens = train_givens)
 
+	def _grad_clip_norm(tensor_vars, max_norm):
+		norm = T.sqrt(sum(T.sum(tensor ** 2) for tensor in tensor_vars))
+		dtype = np.dtype(theano.config.floatX).type
+		return max_norm / T.max(dtype(max_norm), norm)
+
 	def _get_rmsprop_updates(self, loss, params, lr, grad_momentum
 							, sqr_momentum, min_grad):
 		# Modified from the Lasagne package:
 		# 	https://github.com/Lasagne/Lasagne/blob/master/lasagne/updates.py
 
 		grads = theano.grad(loss, params)
+		scale_factor = 1.0
 		if self.max_norm > 0:
-			grads = lasagne.updates.total_norm_constraint(grads, self.max_norm)
+			scale_factor = self._grad_clip_norm(grads, self.max_norm)
 		updates = OrderedDict()
 
 		# Using theano constant to prevent upcasting of float32
@@ -262,13 +268,16 @@ class Network:
 
 			updates[accu] = accu_new
 			updates[accu_sqr] = accu_sqr_new
-			updates[param] = param - (lr * grad /
+			updates[param] = param - (lr * grad * scale_factor /
 				T.sqrt(accu_sqr_new - accu_new ** 2 + min_grad))
 		return updates
 
 	def _compile_evaluate_function(self):
 		state = T.tensor4(dtype = theano.config.floatX)
-		action = self._get_action_var(self.adv_net, state)
+		if self.network_type == 'duel':
+			action = self._get_action_var(self.adv_net, state)
+		else:
+			action = self._get_action_var(self.net, state)
 		return theano.function([], action
 			, givens = {state : self.shared_single / Network.INPUT_SCALE})
 

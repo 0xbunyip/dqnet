@@ -30,6 +30,7 @@ class Environment:
 		self.api.setBool('display_screen', display_screen)
 		self.api.setFloat('repeat_action_probability', 0.0)
 		self.rom_name = rom_name
+		self.display_screen = display_screen
 		self.rng = rng
 		self.repeat = Environment.FRAMES_SKIP
 		self.buffer_len = Environment.BUFFER_LEN
@@ -102,15 +103,14 @@ class Environment:
 		sum_step = 0.0
 		for episode in xrange(episodes):
 			self.need_reset = True
-			step, reward = self._run_episode(agent, 
-				self.episode_steps, obs, self.eval_eps, evaluating = True)
+			step, reward = self._run_episode(agent, self.episode_steps, obs
+											, self.eval_eps, evaluating = True)
 			sum_reward += reward
 			sum_step += step
 			print "Finished episode %d, reward = %d, step = %d" \
 					% (episode + 1, reward, step)
 		self.need_reset = True
-		print "Average reward per episode = %.4f" \
-				% (sum_reward / episodes)
+		print "Average reward per episode = %.4f" % (sum_reward / episodes)
 		print "Average step per episode = %.4f" % (sum_step / episodes)
 		return sum_reward / episodes
 
@@ -199,7 +199,7 @@ class Environment:
 
 		with open(self.log_dir + '/info.txt', 'w') as f:
 			f.write('Commit: ' + subprocess.check_output(['git', 'rev-parse', 'HEAD']))
-			f.write('\Run command: ')
+			f.write('Run command: ')
 			f.write(' '.join(pipes.quote(x) for x in sys.argv))
 			f.write('\n\n')
 			f.write(agent.get_info())
@@ -271,8 +271,16 @@ class Environment:
 		self.api.loadROM('../rom/' + self.rom_name)
 		return img_dir, out_name
 
-	def record_run(self, agent, network_file):
+	def record_run(self, agent, network_file, episode_id = 1):
+		if episode_id > 1:
+			self.evaluate(agent, episode_id - 1)
+			system_state = self.api.cloneSystemState()
+
 		img_dir, out_name = self._setup_record(network_file)
+
+		if episode_id > 1:
+			self.api.restoreSystemState(system_state)
+
 		self.evaluate(agent, 1)
 		script = \
 				"""

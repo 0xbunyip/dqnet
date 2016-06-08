@@ -33,7 +33,7 @@ Agent.VALID_SIZE = 3200
 Network.CLONE_FREQ = 30000
 Network.GRAD_MOMENTUM = 0.95
 Network.INPUT_SCALE = 255.0
-Network.LEARNING_RATE = 0.0000625
+Network.LEARNING_RATE = 0.00025
 Network.MAX_ERROR = 1.0
 Network.MAX_NORM = 10
 Network.MIN_SGRAD = 0.01
@@ -87,8 +87,8 @@ def get_arguments(argv):
 					" (-1 for no save, 0 to save at last epoch)")
 
 	parser.add_argument('-s', '--screen-record', dest = 'screen_record'
-		, action = 'store_true'
-		, help = "Record game play and save as a video")
+		, default = 0, type = int
+		, help = "Record this episode and save as a video (0 to not saving)")
 
 	parser.add_argument('-u', '--random-run', dest = 'random_run'
 		, action = 'store_true'
@@ -129,8 +129,8 @@ def main(argv):
 					, arg.continue_folder, arg.continue_epoch)
 	elif arg.network_file is not None:
 		env, agn = build_rl_components(argv)
-		if arg.screen_record:
-			env.record_run(agn, arg.network_file)
+		if arg.screen_record > 0:
+			env.record_run(agn, arg.network_file, arg.screen_record)
 		else:
 			env.evaluate(agn)
 
