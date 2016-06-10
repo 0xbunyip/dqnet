@@ -12,15 +12,15 @@ from theano.printing import debugprint
 class Network:
 	"""docstring for Network"""
 
-	CLONE_FREQ = 10000
+	CLONE_FREQ = 30000
 	GRAD_MOMENTUM = 0.95
 	INPUT_SCALE = 255.0
 	LEARNING_RATE = 0.00025
 	MAX_ERROR = 1.0
-	MAX_NORM = 10.0
+	MAX_NORM = 0
 	MIN_SGRAD = 0.01
 	SGRAD_MOMENTUM = 0.95
-	
+
 	def __init__(self, num_action, mbsize, channel, height, width, discount
 				, up_freq, rng, network_type, algorithm
 				, network_file = None, num_ignore = 0):

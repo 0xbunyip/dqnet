@@ -10,7 +10,7 @@ import sys
 ############### Hyper-parameters ###############
 Environment.BUFFER_LEN = 2
 Environment.EPISODE_FRAMES = 18000
-Environment.EPOCH_COUNT = 100
+Environment.EPOCH_COUNT = 200
 Environment.EPOCH_STEPS = 250000
 Environment.EVAL_EPS = 0.001
 Environment.FRAMES_SKIP = 4
@@ -33,9 +33,9 @@ Agent.VALID_SIZE = 3200
 Network.CLONE_FREQ = 30000
 Network.GRAD_MOMENTUM = 0.95
 Network.INPUT_SCALE = 255.0
-Network.LEARNING_RATE = 0.0000625
+Network.LEARNING_RATE = 0.00025
 Network.MAX_ERROR = 1.0
-Network.MAX_NORM = 10
+Network.MAX_NORM = 0
 Network.MIN_SGRAD = 0.01
 Network.SGRAD_MOMENTUM = 0.95
 ################################################
@@ -54,7 +54,7 @@ def get_arguments(argv):
 		, help = "Display screen while evaluating")
 
 	parser.add_argument('-t', '--network-type', dest = 'network_type'
-		, default = 'duel', type = str
+		, default = 'double', type = str
 		, choices = ['nature', 'nips', 'simple', 'bandit', 'grid', 'linear'
 					, 'double', 'duel']
 		, help = "Type of network to use as function approximator")

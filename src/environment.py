@@ -9,6 +9,7 @@ import subprocess
 import sys
 from ale_python_interface import ALEInterface
 from util.mem_convert import bytes2human
+from util.logging import get_next_name, write_info
 
 class Environment:
 	"""docstring for Environment"""
@@ -179,13 +180,16 @@ class Environment:
 		time_str = time.strftime("_%m-%d-%H-%M", time.localtime())
 		base_rom_name = os.path.splitext(os.path.basename(self.rom_name))[0]
 
+
 		if folder is not None:
 			self.log_dir = folder
 			self.network_dir = self.log_dir + '/network'
-			return
+		else:
+			self.log_dir = '../run_results/' + base_rom_name + time_str
+			self.network_dir = self.log_dir + '/network'
 
-		self.log_dir = '../run_results/' + base_rom_name + time_str
-		self.network_dir = self.log_dir + '/network'
+		info_name = get_next_name(self.log_dir, 'info', 'txt')
+		git_name = get_next_name(self.log_dir, 'git-diff', '')
 
 		try:
 			os.stat(self.log_dir)
@@ -197,31 +201,35 @@ class Environment:
 		except OSError:
 			os.makedirs(self.network_dir)
 
-		with open(self.log_dir + '/info.txt', 'w') as f:
-			f.write('Commit: ' + subprocess.check_output(['git', 'rev-parse', 'HEAD']))
+		with open(os.path.join(self.log_dir, info_name), 'w') as f:
+			f.write('Commit: ' + subprocess.check_output(['git', 'rev-parse'
+														, 'HEAD']))
 			f.write('Run command: ')
 			f.write(' '.join(pipes.quote(x) for x in sys.argv))
 			f.write('\n\n')
 			f.write(agent.get_info())
-			self._write_info(f, Environment)
-			self._write_info(f, agent.__class__)
-			self._write_info(f, agent.network.__class__)
+			write_info(f, Environment)
+			write_info(f, agent.__class__)
+			write_info(f, agent.network.__class__)
 
-		with open(self.log_dir + '/results.csv', 'w') as f:
+		# From https://github.com/spragunr/deep_q_rl/pull/49/files
+		with open(os.path.join(self.log_dir, git_name), 'w') as f:
+			f.write(subprocess.check_output(['git', 'diff', 'HEAD']))
+
+		if folder is not None:
+			return
+
+		with open(os.path.join(self.log_dir, 'results.csv'), 'w') as f:
 			f.write("epoch,episode_train,validate_values,evaluate_reward"\
 				",train_time,test_time,steps_per_second\n")
 
 		mem = psutil.virtual_memory()
-		with open(self.log_dir + '/memory.csv', 'w') as f:
+		with open(os.path.join(self.log_dir, 'memory.csv'), 'w') as f:
 			f.write("epoch,available,free,buffers,cached"\
 					",available_readable,used_percent\n")
 			f.write("%d,%d,%d,%d,%d,%s,%.1f\n" % \
 					(0, mem.available, mem.free, mem.buffers, mem.cached
 					, bytes2human(mem.available), mem.percent))
-
-		# From https://github.com/spragunr/deep_q_rl/pull/49/files
-		with open(os.path.join(self.log_dir, 'git-diff'), 'w') as f:
-			f.write(subprocess.check_output(['git', 'diff', 'HEAD']))
 
 	def _update_log_files(self, agent, epoch, episode, valid_values
 						, eval_values, train_time, test_time, step_per_sec
@@ -243,14 +251,6 @@ class Environment:
 		if (store_freq >= 0 and epoch >= Environment.EPOCH_COUNT) or \
 				(store_freq > 0 and (epoch % store_freq == 0)):
 			agent.dump_exp(self.network_dir + '/exp.npz')
-
-	def _write_info(self, f, c):
-		hyper_params = [attr for attr in dir(c) \
-			if not attr.startswith("__") and not callable(getattr(c, attr))]
-		for param in hyper_params:
-			f.write(str(c.__name__) + '.' + param + ' = ' + \
-					str(getattr(c, param)) + '\n')
-		f.write('\n')
 
 	def _setup_record(self, network_file):
 		file_name, _ = os.path.splitext(os.path.basename(network_file))

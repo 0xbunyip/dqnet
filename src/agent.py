@@ -7,16 +7,16 @@ import matplotlib.pyplot as plt
 class Agent:
 	"""docstring for Agent"""
 
-	DISCOUNT = 0.95
+	DISCOUNT = 0.99
 	EXPLORE_FRAMES = 1000000
-	FINAL_EXPLORE = 0.1
+	FINAL_EXPLORE = 0.01
 	HISTORY = 4
 	INIT_EXPLORE = 1.0
 	MINIBATCH_SIZE = 32
-	REPLAY_SIZE = 500000
+	REPLAY_SIZE = 1000000
 	REPLAY_START = 50000
 	UPDATE_FREQ = 4
-	VALID_SIZE = 2048
+	VALID_SIZE = 3200
 
 	def __init__(self, num_action, frame_height, frame_width, rng, network_type
 				, algorithm, network_file = None, num_ignore = 0
@@ -119,9 +119,9 @@ class Agent:
 
 	def get_info(self):
 		info = "Train from beginning (new experiences)\n"
-		if self.exp_file is not None:
-			info = "Get experiences from " + self.exp_file + '\n'
 		info = info + self.network.get_info()
+		if self.exp_file is not None:
+			info += "Get experiences from " + self.exp_file + '\n\n'
 		return info
 
 	def dump_network(self, file_name):
